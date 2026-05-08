@@ -834,8 +834,17 @@ export default function Home() {
     setShareOpen(true);
   };
 
+  const applyStarterPack = (packTags: string[]) => {
+    setActiveTags(packTags);
+    setSeason("すべて");
+    setTime("すべて");
+    setStatus("all");
+    setQuery("");
+    window.requestAnimationFrame(() => document.getElementById("list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+
   return (
-    <main className="min-h-screen overflow-hidden">
+    <main className="min-h-screen overflow-hidden pb-24 sm:pb-0">
       <Header onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
       <Hero onAdd={() => setModalOpen(true)} onShare={() => openShare(recommendation.spot)} />
 
@@ -849,6 +858,7 @@ export default function Home() {
         {saveError && <p className="mt-4 rounded-2xl bg-coral/10 px-4 py-3 text-sm font-bold text-coral">{saveError}</p>}
       </section>
 
+      <StarterPacksSection onPick={applyStarterPack} onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
       <NextRecommendationCard recommendation={recommendation} onOpen={() => setSelectedSpot(recommendation.spot)} onShare={() => openShare(recommendation.spot)} />
       <MapAndInsights spots={spots} analysis={analysis} />
 
@@ -922,6 +932,7 @@ export default function Home() {
       <AddZekkeiModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onAdd={addSpot} />
       <ZekkeiDetailModal spot={selectedSpot} onClose={() => setSelectedSpot(null)} onUpdate={updateSpot} onShare={(spot) => openShare(spot)} />
       <ShareCardModal isOpen={shareOpen} onClose={() => setShareOpen(false)} spots={spots} analysis={analysis} recommendation={recommendation} featuredSpot={shareSpot} />
+      <MobileBottomDock onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
     </main>
   );
 }
@@ -966,9 +977,66 @@ function Header({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) 
   );
 }
 
+function StarterPacksSection({ onPick, onAdd, onShare }: { onPick: (tags: string[]) => void; onAdd: () => void; onShare: () => void }) {
+  const packs = [
+    { title: "星空デート派", copy: "新月・夜・一生に一度", tags: ["星空"], gradient: "from-[#111827] via-[#3544a4] to-[#f7c77b]" },
+    { title: "島旅ブルー派", copy: "海・島・カップル", tags: ["海", "島"], gradient: "from-[#006b8f] via-[#20bdd1] to-[#fff0c8]" },
+    { title: "世界の夢派", copy: "海外・世界遺産・一生に一度", tags: ["海外"], gradient: "from-[#2a1748] via-[#7b61ff] to-[#ffcf91]" },
+    { title: "週末リセット派", copy: "日本・森・ドライブ", tags: ["日本"], gradient: "from-[#173b2b] via-[#2e8b76] to-[#f8d889]" },
+  ];
+
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-coral">
+            <Wand2 className="h-4 w-4" />
+            Start your list
+          </p>
+          <h2 className="text-2xl font-black tracking-normal text-ink sm:text-3xl">まずは気分で選ぶ。そこから旅が始まる。</h2>
+        </div>
+        <button onClick={onAdd} className="hidden h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-5 text-sm font-black text-white shadow-soft sm:inline-flex">
+          <Plus className="h-4 w-4" />
+          自分で追加
+        </button>
+      </div>
+      <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
+        {packs.map((pack) => (
+          <button
+            key={pack.title}
+            onClick={() => onPick(pack.tags)}
+            className={`grain min-w-[236px] rounded-[1.75rem] bg-gradient-to-br ${pack.gradient} p-5 text-left text-white shadow-soft transition hover:-translate-y-1 sm:min-w-0`}
+          >
+            <div className="mb-8 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/18 backdrop-blur-xl ring-1 ring-white/18">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <p className="text-xl font-black">{pack.title}</p>
+            <p className="mt-2 text-sm font-semibold text-white/68">{pack.copy}</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {pack.tags.map((tag) => (
+                <Pill key={tag} label={tag} light />
+              ))}
+            </div>
+          </button>
+        ))}
+      </div>
+      <div className="mt-4 grid gap-3 rounded-[1.75rem] bg-white p-4 shadow-soft ring-1 ring-slate-200/70 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div>
+          <p className="text-sm font-black text-ink">今日のZekkei Mission</p>
+          <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">1枚だけ「いつか絶対見たい景色」を追加して、共有カードを作る。これだけで自分の旅リストが始まります。</p>
+        </div>
+        <button onClick={onShare} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-coral px-5 text-sm font-black text-white shadow-soft">
+          <Share2 className="h-4 w-4" />
+          共有カードを見る
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function Hero({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
   return (
-    <section className="relative mx-auto grid min-h-[760px] w-full max-w-7xl items-center gap-8 px-4 pb-10 pt-28 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:px-8">
+    <section className="relative mx-auto grid min-h-[700px] w-full max-w-7xl items-center gap-8 px-4 pb-10 pt-24 sm:min-h-[760px] sm:px-6 sm:pt-28 lg:grid-cols-[0.92fr_1.08fr] lg:px-8">
       <div className="relative z-10 max-w-2xl">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
@@ -978,7 +1046,7 @@ function Hero({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
           <Sparkles className="h-4 w-4 text-coral" />
           死ぬまでに見たい景色を、ベストタイミングで。
         </motion.div>
-        <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="text-5xl font-bold leading-[1.05] tracking-normal text-ink sm:text-6xl lg:text-7xl">
+        <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="text-4xl font-bold leading-[1.05] tracking-normal text-ink min-[380px]:text-5xl sm:text-6xl lg:text-7xl">
           Zekkei List
         </motion.h1>
         <p className="mt-5 text-2xl font-semibold leading-relaxed text-slate-800 sm:text-3xl">人生で見たい絶景を、忘れない。</p>
@@ -996,11 +1064,11 @@ function Hero({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
           </button>
         </div>
       </div>
-      <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative min-h-[520px]">
+      <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative min-h-[430px] sm:min-h-[520px]">
         <div className="hero-sky grain absolute inset-0 rounded-[2.25rem] shadow-glow" />
         <PhotoFill src={photoLibrary.stars} alt="満天の星空の絶景写真" className="rounded-[2.25rem]" priority />
         <div className="absolute inset-0 rounded-[2.25rem] bg-gradient-to-br from-ink/82 via-ink/20 to-coral/24" />
-        <div className="absolute inset-x-8 bottom-8 z-10 rounded-[1.75rem] border border-white/40 bg-white/20 p-5 text-white shadow-soft backdrop-blur-xl sm:inset-x-12 sm:p-6">
+        <div className="absolute inset-x-4 bottom-5 z-10 rounded-[1.75rem] border border-white/40 bg-white/20 p-4 text-white shadow-soft backdrop-blur-xl sm:inset-x-12 sm:bottom-8 sm:p-6">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-white/78">Next best timing</p>
@@ -1095,7 +1163,7 @@ function MapAndInsights({ spots, analysis }: { spots: Spot[]; analysis: Analysis
   ];
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <section id="map" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-coral">
@@ -1224,7 +1292,7 @@ function WorldBlobs() {
 
 function StatusTabs({ status, spots, onChange }: { status: Status | "all"; spots: Spot[]; onChange: (status: Status | "all") => void }) {
   return (
-    <div className="glass-panel grid gap-2 rounded-[1.75rem] p-2 sm:grid-cols-5">
+    <div className="glass-panel -mx-1 flex gap-2 overflow-x-auto rounded-[1.75rem] p-2 sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible">
       {statusTabs.map((tab) => {
         const count = tab.value === "all" ? spots.length : spots.filter((spot) => spot.status === tab.value).length;
         const active = status === tab.value;
@@ -1232,7 +1300,7 @@ function StatusTabs({ status, spots, onChange }: { status: Status | "all"; spots
           <button
             key={tab.value}
             onClick={() => onChange(tab.value)}
-            className={`flex items-center justify-between rounded-[1.25rem] px-4 py-3 text-left transition ${active ? "bg-ink text-white shadow-soft" : "bg-white/60 text-slate-600 hover:bg-white"}`}
+            className={`flex min-w-[136px] items-center justify-between rounded-[1.25rem] px-4 py-3 text-left transition sm:min-w-0 ${active ? "bg-ink text-white shadow-soft" : "bg-white/60 text-slate-600 hover:bg-white"}`}
           >
             <span>
               <span className="block text-sm font-black">{tab.label}</span>
@@ -1748,7 +1816,7 @@ function ShareCard({
           : "Once-in-Life Hunter";
 
   return (
-    <div className={`relative overflow-hidden bg-ink text-white shadow-glow ${story ? "h-[720px] w-[405px] rounded-[2.25rem] p-7" : "h-[420px] w-full max-w-[760px] rounded-[2rem] p-7"}`}>
+    <div className={`relative overflow-hidden bg-ink text-white shadow-glow ${story ? "h-[640px] w-full max-w-[360px] rounded-[2rem] p-5 sm:h-[720px] sm:max-w-[405px] sm:rounded-[2.25rem] sm:p-7" : "min-h-[420px] w-full max-w-[760px] rounded-[2rem] p-5 sm:p-7"}`}>
       <PhotoFill src={spot.imageUrl} alt={spot.imageAlt} className="opacity-55" />
       <div className="absolute inset-0 bg-gradient-to-br from-ink/94 via-ink/70 to-coral/42" />
       <div className="absolute -right-20 top-10 h-60 w-60 rounded-full bg-lagoon/30 blur-3xl" />
@@ -1760,7 +1828,7 @@ function ShareCard({
             <Sparkles className="h-5 w-5 text-coral" />
           </div>
           <p className="text-sm font-bold text-white/58">{title}</p>
-          <h3 className={`${story ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-[1.02] tracking-normal`}>
+          <h3 className={`${story ? "mt-3 text-4xl sm:text-5xl" : "mt-2 text-3xl sm:text-4xl"} font-black leading-[1.02] tracking-normal`}>
             {type === "hunter" ? analysis.travelType : type === "next" ? spot.name : analysis.travelType}
           </h3>
           <p className="mt-4 text-sm font-semibold leading-6 text-white/68">
@@ -1780,7 +1848,7 @@ function ShareCard({
               ))}
             </div>
           ) : (
-            <div className={`grid gap-3 ${story ? "grid-cols-2" : "grid-cols-4"}`}>
+            <div className={`grid gap-2 sm:gap-3 ${story ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
               <ShareMetric label="保存した絶景" value={`${spots.length}`} />
               <ShareMetric label="平均Score" value={`${analysis.averageScore}`} />
               <ShareMetric label="一生に一度率" value={`${analysis.onceRate}%`} />
@@ -1810,8 +1878,8 @@ function ShareCard({
 
 function ShareMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[1.25rem] bg-white/12 p-3 backdrop-blur-xl">
-      <p className="text-2xl font-black">{value}</p>
+    <div className="rounded-[1.25rem] bg-white/12 p-2.5 backdrop-blur-xl sm:p-3">
+      <p className="text-xl font-black sm:text-2xl">{value}</p>
       <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">{label}</p>
     </div>
   );
@@ -1860,6 +1928,33 @@ function ShareSection({ spots, top, analysis, onShare }: { spots: Spot[]; top: S
         </div>
       </div>
     </section>
+  );
+}
+
+function MobileBottomDock({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
+  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  return (
+    <div className="fixed inset-x-3 bottom-3 z-40 rounded-[1.5rem] border border-white/70 bg-white/82 p-2 shadow-glow backdrop-blur-2xl sm:hidden">
+      <div className="grid grid-cols-4 gap-1">
+        <DockButton icon={<Sparkles />} label="List" onClick={() => jump("list")} />
+        <DockButton icon={<Map />} label="Map" onClick={() => jump("map")} />
+        <button onClick={onAdd} className="flex min-h-14 flex-col items-center justify-center rounded-[1.15rem] bg-ink px-2 text-xs font-black text-white shadow-soft">
+          <Plus className="mb-1 h-5 w-5" />
+          追加
+        </button>
+        <DockButton icon={<Share2 />} label="Share" onClick={onShare} />
+      </div>
+    </div>
+  );
+}
+
+function DockButton({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex min-h-14 flex-col items-center justify-center rounded-[1.15rem] px-2 text-xs font-black text-slate-600 transition active:bg-slate-100 [&_svg]:mb-1 [&_svg]:h-5 [&_svg]:w-5">
+      {icon}
+      {label}
+    </button>
   );
 }
 
