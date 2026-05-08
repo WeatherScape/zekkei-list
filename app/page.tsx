@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import {
   CalendarDays,
   Camera,
@@ -38,6 +39,8 @@ type Spot = {
   memo: string;
   saved: boolean;
   gradient: string;
+  image?: string;
+  imageAlt?: string;
 };
 
 const STORAGE_KEY = "zekkei-list-spots-v1";
@@ -55,14 +58,27 @@ const gradients = [
   "from-[#114457] via-[#34a5b0] to-[#fed7aa]",
 ];
 
+const photoLibrary = {
+  stars: "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=1400&q=85",
+  beach: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=85",
+  autumn: "https://images.unsplash.com/photo-1476820865390-c52aeebb9891?auto=format&fit=crop&w=1400&q=85",
+  clouds: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=85",
+  snow: "https://images.unsplash.com/photo-1483664852095-d6cc6870702d?auto=format&fit=crop&w=1400&q=85",
+  bridge: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1400&q=85",
+  waterfall: "https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=1400&q=85",
+  sunrise: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1400&q=85",
+};
+
+const fallbackPhotos = Object.values(photoLibrary);
+
 const samples: Spot[] = [
-  ["hateruma-stars", "波照間島の星空", "沖縄県・波照間島", ["星空", "島", "一生に一度", "カップル"], "夏", "夜", ["新月", "晴れ"], "恋人", 98, "日本最南端の島で、満天の星を見たい。", gradients[0]],
-  ["yonaha-maehama", "与那覇前浜ビーチ", "沖縄県・宮古島", ["海", "島", "ドライブ", "カップル"], "夏", "昼", ["晴れ"], "恋人", 94, "真っ白な砂浜と透明な海を見たい。", gradients[1]],
-  ["kamikochi-autumn", "上高地の紅葉", "長野県・松本市", ["紅葉", "朝日", "一生に一度"], "秋", "朝", ["晴れ", "霧"], "いつか", 91, "朝もやと紅葉の中を歩きたい。", gradients[2]],
-  ["takeda-clouds", "竹田城跡の雲海", "兵庫県・朝来市", ["雲海", "朝日", "一生に一度"], "秋", "朝", ["霧", "晴れ"], "友達", 89, "天空の城のような景色を見たい。", gradients[3]],
-  ["shirakawago-snow", "白川郷の雪景色", "岐阜県・白川村", ["雪", "一生に一度", "家族"], "冬", "夕方", ["雪"], "家族", 90, "合掌造りに雪が積もる景色を見たい。", gradients[4]],
-  ["tsunoshima-bridge", "角島大橋", "山口県・下関市", ["海", "ドライブ", "夕日"], "夏", "昼", ["晴れ"], "友達", 86, "海の上を走るようなドライブをしたい。", gradients[5]],
-].map(([id, name, area, spotTags, season, time, spotConditions, companion, score, memo, gradient]) => ({
+  ["hateruma-stars", "波照間島の星空", "沖縄県・波照間島", ["星空", "島", "一生に一度", "カップル"], "夏", "夜", ["新月", "晴れ"], "恋人", 98, "日本最南端の島で、満天の星を見たい。", gradients[0], photoLibrary.stars],
+  ["yonaha-maehama", "与那覇前浜ビーチ", "沖縄県・宮古島", ["海", "島", "ドライブ", "カップル"], "夏", "昼", ["晴れ"], "恋人", 94, "真っ白な砂浜と透明な海を見たい。", gradients[1], photoLibrary.beach],
+  ["kamikochi-autumn", "上高地の紅葉", "長野県・松本市", ["紅葉", "朝日", "一生に一度"], "秋", "朝", ["晴れ", "霧"], "いつか", 91, "朝もやと紅葉の中を歩きたい。", gradients[2], photoLibrary.autumn],
+  ["takeda-clouds", "竹田城跡の雲海", "兵庫県・朝来市", ["雲海", "朝日", "一生に一度"], "秋", "朝", ["霧", "晴れ"], "友達", 89, "天空の城のような景色を見たい。", gradients[3], photoLibrary.clouds],
+  ["shirakawago-snow", "白川郷の雪景色", "岐阜県・白川村", ["雪", "一生に一度", "家族"], "冬", "夕方", ["雪"], "家族", 90, "合掌造りに雪が積もる景色を見たい。", gradients[4], photoLibrary.snow],
+  ["tsunoshima-bridge", "角島大橋", "山口県・下関市", ["海", "ドライブ", "夕日"], "夏", "昼", ["晴れ"], "友達", 86, "海の上を走るようなドライブをしたい。", gradients[5], photoLibrary.bridge],
+].map(([id, name, area, spotTags, season, time, spotConditions, companion, score, memo, gradient, image]) => ({
   id,
   name,
   area,
@@ -74,6 +90,8 @@ const samples: Spot[] = [
   score,
   memo,
   gradient,
+  image,
+  imageAlt: `${name}の絶景写真`,
   saved: true,
 })) as Spot[];
 
@@ -131,7 +149,14 @@ export default function Home() {
 
   const addSpot = (spot: Omit<Spot, "id" | "saved" | "gradient">) => {
     setSpots((current) => [
-      { ...spot, id: crypto.randomUUID(), saved: true, gradient: gradients[current.length % gradients.length] },
+      {
+        ...spot,
+        id: crypto.randomUUID(),
+        saved: true,
+        gradient: gradients[current.length % gradients.length],
+        image: pickPhotoForTags(spot.tags, current.length),
+        imageAlt: `${spot.name}の絶景写真`,
+      },
       ...current,
     ]);
   };
@@ -171,8 +196,10 @@ export default function Home() {
           <Sun className="h-7 w-7 text-coral" />
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {ranked.slice(0, 3).map((spot) => (
-            <article key={spot.id} className={`grain min-h-48 rounded-[1.75rem] bg-gradient-to-br ${spot.gradient} p-5 text-white shadow-soft`}>
+          {ranked.slice(0, 3).map((spot, index) => (
+            <article key={spot.id} className={`grain relative min-h-48 overflow-hidden rounded-[1.75rem] bg-gradient-to-br ${spot.gradient} p-5 text-white shadow-soft`}>
+              <Image src={photoForSpot(spot, index)} alt={spot.imageAlt ?? `${spot.name}の絶景写真`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/66 via-black/20 to-black/34" />
               <div className="relative z-10 flex h-full flex-col justify-between">
                 <div className="flex justify-between gap-4">
                   <div>
@@ -263,6 +290,8 @@ function Hero({ onAdd }: { onAdd: () => void }) {
       </div>
       <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative min-h-[520px]">
         <div className="hero-sky grain absolute inset-0 rounded-[2.25rem] shadow-glow" />
+        <Image src={photoLibrary.stars} alt="満天の星空の絶景写真" fill priority sizes="(min-width: 1024px) 50vw, 100vw" className="rounded-[2.25rem] object-cover" />
+        <div className="absolute inset-0 rounded-[2.25rem] bg-gradient-to-br from-ink/80 via-ink/20 to-coral/24" />
         <div className="absolute inset-x-8 bottom-8 z-10 rounded-[1.75rem] border border-white/40 bg-white/20 p-5 text-white shadow-soft backdrop-blur-xl sm:inset-x-12 sm:p-6">
           <div className="flex items-center justify-between gap-4"><div><p className="text-sm font-semibold text-white/78">Next dream view</p><h2 className="mt-1 text-2xl font-bold">波照間島の星空</h2></div><Score score={98} light /></div>
           <div className="mt-5 flex flex-wrap gap-2">{["新月の日に行きたい", "一生に一度", "カップル", "夏の夜"].map((tag) => <Pill key={tag} label={tag} light />)}</div>
@@ -285,11 +314,31 @@ function Select({ label, value, options, onChange }: { label: string; value: str
   return <label className="flex items-center justify-between gap-3 rounded-2xl bg-white/65 px-4 py-3 ring-1 ring-white/80"><span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{label}</span><span className="relative"><select value={value} onChange={(event) => onChange(event.target.value)} className="appearance-none rounded-full bg-ink py-2 pl-4 pr-9 text-sm font-bold text-white outline-none">{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white" /></span></label>;
 }
 
+function pickPhotoForTags(spotTags: string[], index = 0) {
+  if (spotTags.includes("星空")) return photoLibrary.stars;
+  if (spotTags.includes("海") || spotTags.includes("島")) return photoLibrary.beach;
+  if (spotTags.includes("紅葉")) return photoLibrary.autumn;
+  if (spotTags.includes("雲海")) return photoLibrary.clouds;
+  if (spotTags.includes("雪")) return photoLibrary.snow;
+  if (spotTags.includes("滝")) return photoLibrary.waterfall;
+  if (spotTags.includes("夕日") || spotTags.includes("朝日")) return photoLibrary.sunrise;
+  if (spotTags.includes("ドライブ")) return photoLibrary.bridge;
+  return fallbackPhotos[index % fallbackPhotos.length];
+}
+
+function photoForSpot(spot: Spot, index = 0) {
+  return spot.image ?? pickPhotoForTags(spot.tags, index);
+}
+
 function Card({ spot, index, onToggle }: { spot: Spot; index: number; onToggle: () => void }) {
+  const image = photoForSpot(spot, index);
+
   return (
     <motion.article layout initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ delay: Math.min(index * 0.04, 0.24) }} className="group overflow-hidden rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200/70 transition duration-300 hover:-translate-y-1 hover:shadow-glow">
       <div className={`grain relative h-72 bg-gradient-to-br ${spot.gradient} p-5 text-white`}>
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent" />
+        <Image src={image} alt={spot.imageAlt ?? `${spot.name}の絶景写真`} fill sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover transition duration-700 group-hover:scale-105" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/28 via-black/10 to-black/66" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_28rem)]" />
         <div className="relative z-10 flex items-start justify-between gap-3"><div className="flex flex-wrap gap-2">{spot.tags.slice(0, 3).map((tag) => <Pill key={tag} label={tag} light />)}</div><button aria-label="保存状態を切り替える" onClick={onToggle} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/18 text-white backdrop-blur-xl ring-1 ring-white/25"><Heart className={`h-5 w-5 ${spot.saved ? "fill-current text-coral" : ""}`} /></button></div>
         <div className="absolute bottom-5 left-5 right-5 z-10"><div className="mb-4 flex items-end justify-between gap-3"><div><p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-white/75"><MapPin className="h-4 w-4" />{spot.area}</p><h3 className="text-3xl font-bold leading-tight">{spot.name}</h3></div><Score score={spot.score} light /></div></div>
       </div>
@@ -341,7 +390,42 @@ function Choice({ label, options, selected, onToggle }: { label: string; options
 function Share({ spots, top }: { spots: Spot[]; top: Spot[] }) {
   const once = spots.filter((spot) => spot.tags.includes("一生に一度")).length;
   const highlights = Array.from(new Set(spots.flatMap((spot) => spot.tags))).slice(0, 8);
-  return <section id="share" className="px-4 pb-16 pt-8 sm:px-6 lg:px-8"><div className="mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] bg-ink p-4 text-white shadow-glow sm:p-6 lg:p-8"><div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 sm:p-8"><div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between"><div><p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white/80"><Share2 className="h-4 w-4" />Screenshot ready</p><h2 className="text-4xl font-black tracking-normal sm:text-5xl">My Zekkei List</h2><p className="mt-3 max-w-xl text-base leading-7 text-white/62">人生で見たい絶景を、忘れない。</p></div><div className="grid grid-cols-2 gap-3 sm:min-w-64"><div className="rounded-[1.5rem] bg-white/10 p-4"><p className="text-4xl font-black">{spots.length}</p><p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-white/50">saved views</p></div><div className="rounded-[1.5rem] bg-white/10 p-4"><p className="text-4xl font-black">{once}</p><p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-white/50">once in life</p></div></div></div><div className="grid gap-4 md:grid-cols-3">{top.map((spot) => <div key={spot.id} className={`grain relative min-h-80 overflow-hidden rounded-[2rem] bg-gradient-to-br ${spot.gradient} p-5 shadow-soft`}><div className="relative z-10 flex h-full flex-col justify-between"><Score score={spot.score} light /><div><div className="mb-3 flex flex-wrap gap-2">{spot.tags.slice(0, 2).map((tag) => <Pill key={tag} label={tag} light />)}</div><p className="text-sm font-semibold text-white/70">{spot.area}</p><h3 className="mt-1 text-2xl font-black">{spot.name}</h3></div></div></div>)}</div><div className="mt-7 flex flex-wrap gap-2">{highlights.map((tag) => <span key={tag} className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white/78 ring-1 ring-white/10">#{tag}</span>)}</div></div></div></section>;
+  return (
+    <section id="share" className="px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] bg-ink p-4 text-white shadow-glow sm:p-6 lg:p-8">
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 sm:p-8">
+          <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white/80"><Share2 className="h-4 w-4" />Screenshot ready</p>
+              <h2 className="text-4xl font-black tracking-normal sm:text-5xl">My Zekkei List</h2>
+              <p className="mt-3 max-w-xl text-base leading-7 text-white/62">人生で見たい絶景を、忘れない。</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:min-w-64">
+              <div className="rounded-[1.5rem] bg-white/10 p-4"><p className="text-4xl font-black">{spots.length}</p><p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-white/50">saved views</p></div>
+              <div className="rounded-[1.5rem] bg-white/10 p-4"><p className="text-4xl font-black">{once}</p><p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-white/50">once in life</p></div>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {top.map((spot, index) => (
+              <div key={spot.id} className={`grain relative min-h-80 overflow-hidden rounded-[2rem] bg-gradient-to-br ${spot.gradient} p-5 shadow-soft`}>
+                <Image src={photoForSpot(spot, index)} alt={spot.imageAlt ?? `${spot.name}の絶景写真`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/24 via-black/10 to-black/70" />
+                <div className="relative z-10 flex h-full flex-col justify-between">
+                  <Score score={spot.score} light />
+                  <div>
+                    <div className="mb-3 flex flex-wrap gap-2">{spot.tags.slice(0, 2).map((tag) => <Pill key={tag} label={tag} light />)}</div>
+                    <p className="text-sm font-semibold text-white/70">{spot.area}</p>
+                    <h3 className="mt-1 text-2xl font-black">{spot.name}</h3>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-7 flex flex-wrap gap-2">{highlights.map((tag) => <span key={tag} className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white/78 ring-1 ring-white/10">#{tag}</span>)}</div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function Empty({ onAdd }: { onAdd: () => void }) {
