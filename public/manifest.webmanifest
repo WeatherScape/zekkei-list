@@ -1,0 +1,9 @@
+{
+  "name": "Zekkei List",
+  "short_name": "Zekkei",
+  "description": "人生で見たい絶景を、忘れない。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffaf4",
+  "theme_color": "#0c1222"
+}
