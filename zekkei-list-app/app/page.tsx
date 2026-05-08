@@ -5,20 +5,25 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import {
   CalendarDays,
+  BarChart3,
   Camera,
   Check,
   ChevronDown,
   Compass,
   Filter,
   Heart,
+  Map,
   MapPin,
   Moon,
+  Navigation2,
   Plus,
+  Route,
   Search,
   Share2,
   Sparkles,
   Star,
   Sun,
+  TrendingUp,
   Users,
   X,
 } from "lucide-react";
@@ -41,6 +46,10 @@ type Spot = {
   gradient: string;
   image?: string;
   imageAlt?: string;
+  coords?: {
+    lat: number;
+    lng: number;
+  };
 };
 
 const STORAGE_KEY = "zekkei-list-spots-v1";
@@ -72,13 +81,13 @@ const photoLibrary = {
 const fallbackPhotos = Object.values(photoLibrary);
 
 const samples: Spot[] = [
-  ["hateruma-stars", "波照間島の星空", "沖縄県・波照間島", ["星空", "島", "一生に一度", "カップル"], "夏", "夜", ["新月", "晴れ"], "恋人", 98, "日本最南端の島で、満天の星を見たい。", gradients[0], photoLibrary.stars],
-  ["yonaha-maehama", "与那覇前浜ビーチ", "沖縄県・宮古島", ["海", "島", "ドライブ", "カップル"], "夏", "昼", ["晴れ"], "恋人", 94, "真っ白な砂浜と透明な海を見たい。", gradients[1], photoLibrary.beach],
-  ["kamikochi-autumn", "上高地の紅葉", "長野県・松本市", ["紅葉", "朝日", "一生に一度"], "秋", "朝", ["晴れ", "霧"], "いつか", 91, "朝もやと紅葉の中を歩きたい。", gradients[2], photoLibrary.autumn],
-  ["takeda-clouds", "竹田城跡の雲海", "兵庫県・朝来市", ["雲海", "朝日", "一生に一度"], "秋", "朝", ["霧", "晴れ"], "友達", 89, "天空の城のような景色を見たい。", gradients[3], photoLibrary.clouds],
-  ["shirakawago-snow", "白川郷の雪景色", "岐阜県・白川村", ["雪", "一生に一度", "家族"], "冬", "夕方", ["雪"], "家族", 90, "合掌造りに雪が積もる景色を見たい。", gradients[4], photoLibrary.snow],
-  ["tsunoshima-bridge", "角島大橋", "山口県・下関市", ["海", "ドライブ", "夕日"], "夏", "昼", ["晴れ"], "友達", 86, "海の上を走るようなドライブをしたい。", gradients[5], photoLibrary.bridge],
-].map(([id, name, area, spotTags, season, time, spotConditions, companion, score, memo, gradient, image]) => ({
+  ["hateruma-stars", "波照間島の星空", "沖縄県・波照間島", ["星空", "島", "一生に一度", "カップル"], "夏", "夜", ["新月", "晴れ"], "恋人", 98, "日本最南端の島で、満天の星を見たい。", gradients[0], photoLibrary.stars, { lat: 24.058, lng: 123.783 }],
+  ["yonaha-maehama", "与那覇前浜ビーチ", "沖縄県・宮古島", ["海", "島", "ドライブ", "カップル"], "夏", "昼", ["晴れ"], "恋人", 94, "真っ白な砂浜と透明な海を見たい。", gradients[1], photoLibrary.beach, { lat: 24.735, lng: 125.268 }],
+  ["kamikochi-autumn", "上高地の紅葉", "長野県・松本市", ["紅葉", "朝日", "一生に一度"], "秋", "朝", ["晴れ", "霧"], "いつか", 91, "朝もやと紅葉の中を歩きたい。", gradients[2], photoLibrary.autumn, { lat: 36.247, lng: 137.637 }],
+  ["takeda-clouds", "竹田城跡の雲海", "兵庫県・朝来市", ["雲海", "朝日", "一生に一度"], "秋", "朝", ["霧", "晴れ"], "友達", 89, "天空の城のような景色を見たい。", gradients[3], photoLibrary.clouds, { lat: 35.300, lng: 134.829 }],
+  ["shirakawago-snow", "白川郷の雪景色", "岐阜県・白川村", ["雪", "一生に一度", "家族"], "冬", "夕方", ["雪"], "家族", 90, "合掌造りに雪が積もる景色を見たい。", gradients[4], photoLibrary.snow, { lat: 36.257, lng: 136.907 }],
+  ["tsunoshima-bridge", "角島大橋", "山口県・下関市", ["海", "ドライブ", "夕日"], "夏", "昼", ["晴れ"], "友達", 86, "海の上を走るようなドライブをしたい。", gradients[5], photoLibrary.bridge, { lat: 34.353, lng: 130.881 }],
+].map(([id, name, area, spotTags, season, time, spotConditions, companion, score, memo, gradient, image, coords]) => ({
   id,
   name,
   area,
@@ -92,6 +101,7 @@ const samples: Spot[] = [
   gradient,
   image,
   imageAlt: `${name}の絶景写真`,
+  coords,
   saved: true,
 })) as Spot[];
 
@@ -156,6 +166,7 @@ export default function Home() {
         gradient: gradients[current.length % gradients.length],
         image: pickPhotoForTags(spot.tags, current.length),
         imageAlt: `${spot.name}の絶景写真`,
+        coords: guessCoordinates(spot.area, spot.tags, current.length),
       },
       ...current,
     ]);
@@ -186,6 +197,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <MapAndInsights spots={spots} />
 
       <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-5 flex items-center justify-between">
@@ -258,6 +271,242 @@ export default function Home() {
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} onAdd={addSpot} />
     </main>
   );
+}
+
+function MapAndInsights({ spots }: { spots: Spot[] }) {
+  const average = Math.round(spots.reduce((sum, spot) => sum + spot.score, 0) / Math.max(spots.length, 1));
+  const topTags = topCounts(spots.flatMap((spot) => spot.tags)).slice(0, 5);
+  const topSeasons = topCounts(spots.map((spot) => spot.season));
+  const topTimes = topCounts(spots.map((spot) => spot.time));
+  const topCompanions = topCounts(spots.map((spot) => spot.companion));
+  const topTag = topTags[0]?.label ?? "絶景";
+  const topSeason = topSeasons[0]?.label ?? "通年";
+  const topTime = topTimes[0]?.label ?? "いつでも";
+  const once = spots.filter((spot) => spot.tags.includes("一生に一度")).length;
+  const sea = spots.filter((spot) => spot.tags.includes("海") || spot.tags.includes("島")).length;
+  const night = spots.filter((spot) => spot.tags.includes("星空") || spot.time === "夜").length;
+  const seasonal = spots.filter((spot) => spot.season !== "通年").length;
+  const drive = spots.filter((spot) => spot.tags.includes("ドライブ")).length;
+  const dna = [
+    { label: "海と島", value: percent(sea, spots.length), tone: "bg-lagoon" },
+    { label: "夜景・星空", value: percent(night, spots.length), tone: "bg-aurora" },
+    { label: "季節狙い", value: percent(seasonal, spots.length), tone: "bg-coral" },
+    { label: "一生もの", value: percent(once, spots.length), tone: "bg-ink" },
+  ];
+  const mood = buildMoodLabel({ sea, night, once, drive, topTag });
+
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-coral"><Map className="h-4 w-4" />Zekkei Map & DNA</p>
+          <h2 className="text-3xl font-semibold tracking-normal text-ink sm:text-4xl">行きたい景色の偏りまで、美しく見える。</h2>
+        </div>
+        <div className="glass-panel rounded-full px-5 py-3 text-sm font-bold text-slate-600">
+          {topSeason} / {topTime} / #{topTag}
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <ZekkeiMap spots={spots} />
+        <div className="grid gap-5">
+          <div className="overflow-hidden rounded-[2rem] bg-ink p-5 text-white shadow-glow">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="mb-2 text-sm font-semibold text-white/55">Your Zekkei DNA</p>
+                <h3 className="text-3xl font-black tracking-normal">{mood}</h3>
+              </div>
+              <div className="rounded-2xl bg-white/10 px-4 py-3 text-right">
+                <p className="text-3xl font-black">{average}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/45">avg score</p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-white/62">
+              {buildInsightSentence(topTag, topSeason, topTime, once, spots.length)}
+            </p>
+            <div className="mt-6 grid gap-3">
+              {dna.map((item) => <DnaMeter key={item.label} {...item} />)}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <MiniInsight icon={<TrendingUp />} label="いま一番強い気分" value={`#${topTag}`} note={`${topTags[0]?.count ?? 0} spots`} />
+            <MiniInsight icon={<Navigation2 />} label="旅の時間帯" value={topTime} note={`${topTimes[0]?.count ?? 0} spots`} />
+            <MiniInsight icon={<Route />} label="誰と行きたい" value={topCompanions[0]?.label ?? "いつか"} note={`${topCompanions[0]?.count ?? 0} spots`} />
+            <MiniInsight icon={<BarChart3 />} label="一生に一度率" value={`${percent(once, spots.length)}%`} note={`${once}/${spots.length} spots`} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-3">
+        <DistributionCard title="Season Mix" items={topSeasons} total={spots.length} />
+        <DistributionCard title="Tag Signal" items={topTags} total={spots.length} />
+        <DistributionCard title="Time Mood" items={topTimes} total={spots.length} />
+      </div>
+    </section>
+  );
+}
+
+function ZekkeiMap({ spots }: { spots: Spot[] }) {
+  const mapped = spots.map((spot, index) => ({ spot, point: mapPoint(coordsForSpot(spot, index)) }));
+  const top = [...spots].sort((a, b) => b.score - a.score)[0];
+
+  return (
+    <div className="relative min-h-[520px] overflow-hidden rounded-[2.25rem] bg-[#0c1222] p-5 text-white shadow-glow sm:p-6">
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(22,184,199,0.24),transparent_36%),radial-gradient(circle_at_75%_18%,rgba(255,139,104,0.26),transparent_22rem)]" />
+      <div className="absolute inset-5 rounded-[1.75rem] border border-white/10" />
+      <div className="relative z-10 flex items-start justify-between gap-4">
+        <div>
+          <p className="mb-2 text-sm font-semibold text-white/55">Visual location</p>
+          <h3 className="text-3xl font-black tracking-normal">Zekkei Map</h3>
+        </div>
+        <div className="rounded-2xl bg-white/10 px-4 py-3 text-right backdrop-blur-xl">
+          <p className="text-2xl font-black">{spots.length}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/45">pins</p>
+        </div>
+      </div>
+
+      <div className="absolute inset-x-7 bottom-7 top-28 rounded-[2rem] bg-white/[0.06] ring-1 ring-white/10">
+        <div className="absolute left-[40%] top-[6%] h-[74%] w-[20%] rotate-[20deg] rounded-[55%] bg-white/[0.08] blur-sm" />
+        <div className="absolute left-[34%] top-[12%] h-[72%] w-[16%] rotate-[18deg] rounded-[50%] border border-white/10" />
+        <div className="absolute left-[46%] top-[24%] h-[54%] w-[14%] rotate-[22deg] rounded-[50%] border border-white/10" />
+        <div className="absolute left-[31%] top-[58%] h-[22%] w-[18%] rotate-[18deg] rounded-[50%] border border-white/10" />
+        <div className="absolute left-[20%] top-[78%] h-[12%] w-[20%] -rotate-[12deg] rounded-[50%] border border-white/10" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:48px_48px] opacity-40" />
+
+        {mapped.map(({ spot, point }, index) => (
+          <div key={spot.id} className="group absolute z-10 -translate-x-1/2 -translate-y-1/2" style={{ left: `${point.x}%`, top: `${point.y}%` }}>
+            <div className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coral/30 blur-md" />
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-glow ring-4 ring-white/20">
+              <span className="text-xs font-black">{index + 1}</span>
+            </div>
+            <div className="pointer-events-none absolute bottom-11 left-1/2 hidden w-52 -translate-x-1/2 rounded-2xl bg-white p-3 text-ink shadow-soft group-hover:block">
+              <p className="text-xs font-bold text-slate-400">{spot.area}</p>
+              <p className="mt-1 text-sm font-black">{spot.name}</p>
+              <p className="mt-1 text-xs font-semibold text-coral">Score {spot.score}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {top && (
+        <div className="absolute bottom-10 left-10 right-10 z-20 rounded-[1.5rem] border border-white/12 bg-white/10 p-4 backdrop-blur-xl">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/45">Current north star</p>
+          <div className="mt-2 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xl font-black">{top.name}</p>
+              <p className="text-sm font-semibold text-white/56">{top.area}</p>
+            </div>
+            <Score score={top.score} light />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DnaMeter({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/62">
+        <span>{label}</span>
+        <span>{value}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-white/10">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(value, 8)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function MiniInsight({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: string; note: string }) {
+  return (
+    <div className="glass-panel rounded-[1.5rem] p-4">
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-ink shadow-soft [&_svg]:h-5 [&_svg]:w-5">{icon}</div>
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <p className="mt-1 truncate text-2xl font-black text-ink">{value}</p>
+      <p className="mt-1 text-xs font-bold text-slate-400">{note}</p>
+    </div>
+  );
+}
+
+function DistributionCard({ title, items, total }: { title: string; items: { label: string; count: number }[]; total: number }) {
+  return (
+    <div className="glass-panel rounded-[1.75rem] p-5">
+      <p className="mb-4 flex items-center gap-2 text-sm font-black text-ink"><BarChart3 className="h-4 w-4 text-coral" />{title}</p>
+      <div className="grid gap-3">
+        {items.slice(0, 4).map((item) => (
+          <div key={item.label}>
+            <div className="mb-1 flex items-center justify-between text-sm font-bold text-slate-600">
+              <span>{item.label}</span>
+              <span>{item.count}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-ink" style={{ width: `${Math.max(percent(item.count, total), 8)}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function topCounts(values: string[]) {
+  const counts = values.reduce<Record<string, number>>((acc, value) => {
+    acc[value] = (acc[value] ?? 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(counts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+function percent(value: number, total: number) {
+  return Math.round((value / Math.max(total, 1)) * 100);
+}
+
+function buildMoodLabel({ sea, night, once, drive, topTag }: { sea: number; night: number; once: number; drive: number; topTag: string }) {
+  if (sea >= night && sea >= once) return "Island Blue Collector";
+  if (night >= sea && night >= once) return "New Moon Dreamer";
+  if (once >= sea && once >= night) return "Once-in-Life Hunter";
+  if (drive > 1) return "Scenic Drive Mood";
+  return `${topTag} Seeker`;
+}
+
+function buildInsightSentence(topTag: string, topSeason: string, topTime: string, once: number, total: number) {
+  return `あなたの絶景リストは「${topSeason}の${topTime}」と「#${topTag}」に強く反応中。一生に一度枠は${once}/${total}で、かなり本気のBucket Listです。`;
+}
+
+function coordsForSpot(spot: Spot, index = 0) {
+  return spot.coords ?? guessCoordinates(spot.area, spot.tags, index);
+}
+
+function guessCoordinates(area: string, spotTags: string[], index = 0) {
+  const presets = [
+    { key: "北海道", lat: 43.064, lng: 141.346 },
+    { key: "沖縄", lat: 26.212, lng: 127.681 },
+    { key: "長野", lat: 36.648, lng: 138.195 },
+    { key: "岐阜", lat: 35.391, lng: 136.722 },
+    { key: "兵庫", lat: 34.691, lng: 135.183 },
+    { key: "山口", lat: 34.186, lng: 131.471 },
+    { key: "東京", lat: 35.681, lng: 139.767 },
+    { key: "京都", lat: 35.011, lng: 135.768 },
+  ];
+  const matched = presets.find((item) => area.includes(item.key));
+  if (matched) return { lat: matched.lat, lng: matched.lng };
+  if (spotTags.includes("島") || spotTags.includes("海")) return { lat: 30 + index * 0.4, lng: 130 + index * 0.8 };
+  return { lat: 34.8 + index * 0.8, lng: 136.5 + index * 0.7 };
+}
+
+function mapPoint(coords: { lat: number; lng: number }) {
+  return {
+    x: clamp(((coords.lng - 122) / 24) * 100, 7, 93),
+    y: clamp(((46 - coords.lat) / 22) * 100, 7, 93),
+  };
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function Header({ onAdd }: { onAdd: () => void }) {
