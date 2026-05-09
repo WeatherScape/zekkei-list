@@ -43,7 +43,7 @@ type TimeSlot = "早朝" | "朝" | "昼" | "夕方" | "夜" | "いつでも";
 type Companion = "ひとり" | "友達" | "恋人" | "家族" | "いつかの自分";
 type Status = "visited" | "want" | "planned" | "dream" | "draft";
 type OnceLevel = "normal" | "special" | "once-in-life";
-type ShareType = "story-poster" | "museum-card" | "x-card";
+type ShareType = "psyche" | "landscape" | "film" | "soul" | "story-poster" | "museum-card" | "x-card";
 type ShareLayout = "story" | "wide";
 
 type Coordinates = {
@@ -95,6 +95,11 @@ type CountItem = { label: string; count: number };
 type MemoryColor = { name: string; hex: string; meaning: string };
 type TravelAura = { label: string; value: number; color: string };
 type MemoryWeather = { sky: string; forecast: string; air: string };
+type EmotionalLandmark = { label: string; x: number; y: number; tone: string };
+type EmotionalLandscape = { title: string; subtitle: string; labels: string[]; landmarks: EmotionalLandmark[] };
+type MemoryFilm = { title: string; credit: string; starring: string; locations: string[]; genre: string; lastScene: string; tagline: string };
+type SoulProfile = { age: number; rarity: "N" | "R" | "SR" | "SSR"; attributes: string[]; weakness: string[]; awakening: string; description: string };
+type JourneyProphecy = { title: string; line: string; reason: string };
 type ShareProfile = {
   memoryCount: number;
   photoCount: number;
@@ -124,6 +129,11 @@ type ShareProfile = {
   museumTitle: string;
   postcard: string;
   statusStory: string;
+  travelPsyche: string;
+  emotionalLandscape: EmotionalLandscape;
+  memoryFilm: MemoryFilm;
+  soulProfile: SoulProfile;
+  nextJourneyProphecy: JourneyProphecy;
 };
 
 const STORAGE_KEY = "zekkei-list-spots-v1";
@@ -1163,9 +1173,10 @@ function MemoryMini({ label, value }: { label: string; value: string }) {
 function MuseumSharePreview({ spots, analysis, spot, onShare }: { spots: Spot[]; analysis: Analysis; spot: Spot; onShare: () => void }) {
   const profile = buildShareProfile(spots, analysis, spot);
   const templates = [
-    { title: "Story Poster", copy: "詩と称号で、ストーリーに載せたくなる縦長ポスター。" },
-    { title: "Museum Card", copy: "美術館の展示プレートみたいに、記憶を作品として飾る。" },
-    { title: "X Share Card", copy: "横長でさらっと投稿できる、旅の性格診断カード。" },
+    { title: "診断 / Psyche", copy: "あなたが本当に探している景色を、旅の深層心理として言語化。" },
+    { title: "地形 / Landscape", copy: "感情を架空の地形図に変えて、心の中の絶景地図を作る。" },
+    { title: "映画 / Memory Film", copy: "旅の記憶を1本の映画ポスターみたいな作品にする。" },
+    { title: "魂 / Soul Profile", copy: "旅の魂年齢・属性・レア度まで出る、診断結果カード。" },
   ];
 
   return (
@@ -1176,14 +1187,14 @@ function MuseumSharePreview({ spots, analysis, spot, onShare }: { spots: Spot[];
             <Share2 className="h-4 w-4" />
             Share Preview / 思い出カード
           </p>
-          <h2 className="text-3xl font-black tracking-normal text-ink sm:text-4xl">旅の記憶を、AIが1枚のポスター作品に。</h2>
+          <h2 className="text-3xl font-black tracking-normal text-ink sm:text-4xl">旅の深層心理を、AIが1枚の診断作品に。</h2>
           <p className="mt-4 max-w-xl text-sm font-semibold leading-7 text-slate-500">
-            数字だけでなく、称号・ポエム・色の記憶・次に呼ばれている景色まで自動で再解釈。スクショした瞬間に、そのまま載せたくなるMy Zekkei Museumを作ります。
+            保存した景色・感情・季節・同行者から、あなた自身も気づいていない旅の傾向を再解釈。診断、感情地形、映画ポスター、魂プロフィールまで、スクショしたくなるMy Zekkei Museumを作ります。
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button onClick={onShare} className="inline-flex h-13 items-center justify-center gap-2 rounded-full bg-ink px-6 text-sm font-black text-white shadow-soft">
               <LayoutPanelTop className="h-4 w-4" />
-              AI思い出カードを作る
+              旅の深層診断を作る
             </button>
             <a href="#gallery" className="inline-flex h-13 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-ink shadow-soft ring-1 ring-slate-200">
               <Heart className="h-4 w-4 text-coral" />
@@ -1212,18 +1223,28 @@ function MuseumSharePreview({ spots, analysis, spot, onShare }: { spots: Spot[];
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-white/52">Zekkei List</p>
                   <span className="rounded-full bg-white/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/68">{profile.isSampleMuseum ? "Sample Museum" : "Your Museum"}</span>
                 </div>
-                <p className="text-sm font-bold text-white/58">Story Poster</p>
+                <p className="text-sm font-bold text-white/58">Travel Psyche / 旅の深層診断</p>
                 <h3 className="mt-3 text-4xl font-black leading-tight tracking-normal">{profile.honorific}</h3>
-                <p className="mt-4 text-sm font-semibold leading-6 text-white/72">{profile.poem}</p>
+                <p className="mt-4 rounded-[1.35rem] bg-white/12 p-4 text-sm font-semibold leading-7 text-white/78 backdrop-blur-xl">
+                  {profile.travelPsyche}
+                </p>
                 <div className="mt-5">
                   <MemoryPalette palette={profile.palette} />
                 </div>
               </div>
               <div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-[1.35rem] bg-white/10 p-4 ring-1 ring-white/10">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-coral">EMOTIONAL LANDSCAPE</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {profile.emotionalLandscape.labels.slice(0, 4).map((label) => (
+                      <span key={label} className="rounded-full bg-white/12 px-3 py-1 text-[11px] font-black text-white/75">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
                   <ShareMetric label={profile.displayCountLabel} value={`${profile.memoryCount}`} />
-                  <ShareMetric label="思い出の熱量" value={profile.isStartingMuseum ? "これから" : `${profile.memoryHeat}`} />
-                  <ShareMetric label="一番多い感情" value={profile.topEmotion} />
                   <ShareMetric label="今年の旅ログ" value={profile.yearlyJourneyLabel} />
                 </div>
                 <div className="mt-5 rounded-[1.35rem] bg-white/12 p-4 backdrop-blur-xl">
@@ -1232,8 +1253,9 @@ function MuseumSharePreview({ spots, analysis, spot, onShare }: { spots: Spot[];
                   <p className="mt-1 text-xs font-semibold leading-5 text-white/58">{profile.bestMemoryCaption}</p>
                 </div>
                 <div className="mt-4 rounded-[1.2rem] bg-white/10 p-3 ring-1 ring-white/10">
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-coral">NEXT DREAM</p>
-                  <p className="mt-1 text-sm font-black">{profile.nextDream.name}</p>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-coral">NEXT PROPHECY</p>
+                  <p className="mt-1 text-sm font-black">{profile.nextJourneyProphecy.title}</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-white/58">{profile.nextJourneyProphecy.line}</p>
                 </div>
               </div>
             </div>
@@ -2143,7 +2165,7 @@ function ShareCardModal({
   recommendation: Recommendation;
   featuredSpot: Spot | null;
 }) {
-  const [type, setType] = useState<ShareType>("story-poster");
+  const [type, setType] = useState<ShareType>("psyche");
   const [layout, setLayout] = useState<ShareLayout>("story");
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -2155,7 +2177,7 @@ function ShareCardModal({
   const handleTypeChange = (value: string) => {
     const next = value as ShareType;
     setType(next);
-    if (next === "story-poster") setLayout("story");
+    if (next === "psyche" || next === "landscape" || next === "film" || next === "soul" || next === "story-poster") setLayout("story");
     if (next === "x-card") setLayout("wide");
   };
 
@@ -2163,7 +2185,8 @@ function ShareCardModal({
     const text = [
       "My Zekkei Museum",
       `${profile.honorific} / ${profile.travelType}`,
-      profile.poem,
+      profile.travelPsyche,
+      profile.nextJourneyProphecy.line,
       `${profile.displayCountLabel}: ${profile.memoryCount}`,
       `Best Memory: ${profile.bestMemory.name}`,
       `Next Dream: ${profile.nextDream.name}`,
@@ -2227,12 +2250,12 @@ function ShareCardModal({
             </div>
             <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[0.72fr_1fr]">
               <div className="grid content-start gap-4">
-                <Segment label="テンプレート" value={type} options={["story-poster", "museum-card", "x-card"]} labels={{ "story-poster": "Story", "museum-card": "Museum", "x-card": "X" }} onChange={handleTypeChange} light={false} />
+                <Segment label="テンプレート" value={type} options={["psyche", "landscape", "film", "soul", "story-poster", "museum-card", "x-card"]} labels={{ psyche: "診断", landscape: "地形", film: "映画", soul: "魂", "story-poster": "Story", "museum-card": "Museum", "x-card": "X" }} onChange={handleTypeChange} light={false} />
                 <Segment label="比率" value={layout} options={["story", "wide"]} labels={{ story: "Instagram向け縦長", wide: "X向け横長" }} onChange={(value) => setLayout(value as ShareLayout)} light={false} />
                 <div className="rounded-[1.5rem] bg-slate-50 p-4 ring-1 ring-slate-100">
                   <p className="text-sm font-black text-ink">このカードの解釈</p>
                   <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                    あなたの記録から「{profile.honorific}」という二つ名を生成しました。{profile.topEmotion}の記憶が強く、{profile.nextDream.name}が次に呼ばれている景色です。
+                    あなたの記録から「{profile.honorific}」という二つ名を生成しました。{profile.nextJourneyProphecy.line}
                   </p>
                 </div>
                 {profile.isSampleMuseum && (
@@ -2282,7 +2305,20 @@ function ShareCard({
   cardRef?: RefObject<HTMLDivElement | null>;
 }) {
   const wide = type === "x-card" || layout === "wide";
-  const templateTitle = type === "story-poster" ? "Story Poster" : type === "museum-card" ? "Museum Card" : "X Share Card";
+  const templateTitle =
+    type === "psyche"
+      ? "Psyche Card"
+      : type === "landscape"
+        ? "Emotional Map"
+        : type === "film"
+          ? "Memory Film"
+          : type === "soul"
+            ? "Soul Profile"
+            : type === "story-poster"
+              ? "Story Poster"
+              : type === "museum-card"
+                ? "Museum Card"
+                : "X Share Card";
 
   return (
     <div
@@ -2298,7 +2334,15 @@ function ShareCard({
       <div className="absolute -bottom-20 left-0 h-72 w-72 rounded-full bg-coral/24 blur-3xl" />
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/10 to-transparent" />
 
-      {type === "museum-card" ? (
+      {type === "psyche" ? (
+        <PsycheShareCard profile={profile} templateTitle={templateTitle} />
+      ) : type === "landscape" ? (
+        <EmotionalMapShareCard profile={profile} templateTitle={templateTitle} />
+      ) : type === "film" ? (
+        <MemoryFilmShareCard profile={profile} templateTitle={templateTitle} />
+      ) : type === "soul" ? (
+        <SoulProfileShareCard profile={profile} templateTitle={templateTitle} />
+      ) : type === "museum-card" ? (
         <div className={`relative z-10 grid h-full gap-5 ${wide ? "grid-cols-[0.95fr_1.05fr] items-stretch" : "content-between"}`}>
           <div className="flex flex-col justify-between rounded-[1.7rem] border border-white/15 bg-white/[0.08] p-5 backdrop-blur-xl">
             <div>
@@ -2411,6 +2455,183 @@ function ShareCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ShareCardHeader({ profile, templateTitle }: { profile: ShareProfile; templateTitle: string }) {
+  return (
+    <div className="mb-5 flex items-center justify-between gap-4">
+      <p className="text-xs font-black uppercase tracking-[0.2em] text-white/55">Zekkei List</p>
+      <span className="rounded-full bg-white/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/62">{profile.isSampleMuseum ? "Sample Museum" : templateTitle}</span>
+    </div>
+  );
+}
+
+function PsycheShareCard({ profile, templateTitle }: { profile: ShareProfile; templateTitle: string }) {
+  return (
+    <div className="relative z-10 flex h-full flex-col justify-between">
+      <div>
+        <ShareCardHeader profile={profile} templateTitle={templateTitle} />
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-coral">Travel Psyche / 旅の深層診断</p>
+        <h3 className="mt-4 text-4xl font-black leading-[1.03] tracking-normal sm:text-5xl">{profile.honorific}</h3>
+        <p className="mt-3 text-sm font-bold text-white/55">{profile.travelType}</p>
+        <div className="mt-6 rounded-[1.55rem] bg-white/14 p-5 backdrop-blur-xl ring-1 ring-white/12">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/42">あなたが本当に探している景色</p>
+          <p className="mt-3 text-xl font-black leading-8">{profile.travelPsyche}</p>
+        </div>
+      </div>
+      <div>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {[profile.topEmotion, ...profile.topTags.slice(0, 2).map((tag) => tag.label)].map((item) => (
+            <Pill key={item} label={item} light />
+          ))}
+        </div>
+        <div className="rounded-[1.45rem] bg-white/10 p-4 ring-1 ring-white/10">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-coral">NEXT JOURNEY PROPHECY</p>
+          <p className="mt-2 text-lg font-black">{profile.nextJourneyProphecy.title}</p>
+          <p className="mt-1 text-sm font-semibold leading-6 text-white/62">{profile.nextJourneyProphecy.line}</p>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <ShareMetric label={profile.displayCountLabel} value={`${profile.memoryCount}`} />
+          <ShareMetric label="旅の熱量" value={profile.isStartingMuseum ? "Start" : `${profile.memoryHeat}`} />
+          <ShareMetric label="今年" value={profile.yearlyJourneyLabel} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmotionalMapShareCard({ profile, templateTitle }: { profile: ShareProfile; templateTitle: string }) {
+  return (
+    <div className="relative z-10 flex h-full flex-col justify-between">
+      <div>
+        <ShareCardHeader profile={profile} templateTitle={templateTitle} />
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-coral">Emotional Landscape</p>
+        <h3 className="mt-3 text-4xl font-black leading-[1.03]">{profile.emotionalLandscape.title}</h3>
+        <p className="mt-2 text-sm font-semibold leading-6 text-white/62">{profile.emotionalLandscape.subtitle}</p>
+      </div>
+      <EmotionalLandscapeMap landscape={profile.emotionalLandscape} />
+      <div>
+        <MemoryPalette palette={profile.palette} compact />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-[1.3rem] bg-white/12 p-4 backdrop-blur-xl">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-white/42">BEST MEMORY</p>
+            <p className="mt-2 text-lg font-black">{profile.bestMemory.name}</p>
+          </div>
+          <div className="rounded-[1.3rem] bg-white/10 p-4 ring-1 ring-white/10">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-white/42">旅の属性</p>
+            <p className="mt-2 text-sm font-black leading-6">{profile.soulProfile.attributes.slice(0, 3).join(" / ")}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MemoryFilmShareCard({ profile, templateTitle }: { profile: ShareProfile; templateTitle: string }) {
+  return (
+    <div className="relative z-10 flex h-full flex-col justify-between">
+      <div>
+        <ShareCardHeader profile={profile} templateTitle={templateTitle} />
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-white/52">{profile.memoryFilm.credit}</p>
+        <h3 className="mt-8 text-5xl font-black leading-[0.98] tracking-normal sm:text-6xl">『{profile.memoryFilm.title}』</h3>
+        <p className="mt-5 max-w-xs text-sm font-semibold leading-6 text-white/65">{profile.memoryFilm.tagline}</p>
+      </div>
+      <div className="rounded-[1.65rem] border border-white/15 bg-white/[0.08] p-5 backdrop-blur-xl">
+        <FilmLine label="主演" value={profile.memoryFilm.starring} />
+        <FilmLine label="ロケ地" value={profile.memoryFilm.locations.join(" / ")} />
+        <FilmLine label="ジャンル" value={profile.memoryFilm.genre} />
+        <FilmLine label="ラストシーン" value={profile.memoryFilm.lastScene} />
+      </div>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-coral">BEST MEMORY</p>
+          <p className="mt-1 text-xl font-black">{profile.bestMemory.name}</p>
+        </div>
+        <Score score={profile.bestMemory.score} light />
+      </div>
+    </div>
+  );
+}
+
+function FilmLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-b border-white/10 py-2 last:border-b-0">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/38">{label}</p>
+      <p className="mt-1 text-sm font-black leading-5 text-white/82">{value}</p>
+    </div>
+  );
+}
+
+function SoulProfileShareCard({ profile, templateTitle }: { profile: ShareProfile; templateTitle: string }) {
+  return (
+    <div className="relative z-10 flex h-full flex-col justify-between">
+      <div>
+        <ShareCardHeader profile={profile} templateTitle={templateTitle} />
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-coral">Travel Soul Profile</p>
+        <div className="mt-5 grid grid-cols-[1fr_auto] items-end gap-4">
+          <div>
+            <p className="text-sm font-bold text-white/52">旅の魂年齢</p>
+            <p className="text-7xl font-black leading-none">{profile.soulProfile.age}</p>
+          </div>
+          <div className="rounded-[1.35rem] bg-coral px-5 py-4 text-center text-white shadow-soft">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-white/70">Rarity</p>
+            <p className="text-4xl font-black">{profile.soulProfile.rarity}</p>
+          </div>
+        </div>
+        <h3 className="mt-6 text-3xl font-black leading-tight">{profile.honorific}</h3>
+        <p className="mt-3 text-sm font-semibold leading-6 text-white/65">{profile.soulProfile.description}</p>
+      </div>
+      <div className="grid gap-3">
+        <SoulRow label="属性" items={profile.soulProfile.attributes} />
+        <SoulRow label="弱点" items={profile.soulProfile.weakness} />
+        <div className="rounded-[1.35rem] bg-white/12 p-4 backdrop-blur-xl ring-1 ring-white/10">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/42">次に覚醒する景色</p>
+          <p className="mt-2 text-xl font-black">{profile.soulProfile.awakening}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SoulRow({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div className="rounded-[1.35rem] bg-white/10 p-4 ring-1 ring-white/10">
+      <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-white/42">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <Pill key={item} label={item} light />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmotionalLandscapeMap({ landscape }: { landscape: EmotionalLandscape }) {
+  return (
+    <div className="relative my-5 min-h-[260px] overflow-hidden rounded-[1.8rem] bg-white/10 p-4 ring-1 ring-white/10">
+      <svg viewBox="0 0 320 220" className="absolute inset-0 h-full w-full opacity-70">
+        {[0, 1, 2, 3].map((index) => (
+          <path
+            key={index}
+            d={`M${22 + index * 18} ${150 - index * 18} C ${80 + index * 10} ${82 - index * 10}, ${142 + index * 20} ${182 - index * 16}, ${292 - index * 12} ${82 + index * 20}`}
+            fill="none"
+            stroke="rgba(255,255,255,0.16)"
+            strokeWidth="1.4"
+          />
+        ))}
+        <path d="M18 178 C 92 126, 122 210, 198 142 S 266 80, 310 118" fill="none" stroke="rgba(255,139,104,0.36)" strokeWidth="2" />
+      </svg>
+      {landscape.landmarks.map((landmark, index) => (
+        <div key={landmark.label} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${landmark.x}%`, top: `${landmark.y}%` }}>
+          <span className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" style={{ backgroundColor: landmark.tone }} />
+          <span className="relative flex h-4 w-4 rounded-full bg-white ring-4 ring-white/20" />
+          <span className={`absolute ${index % 2 ? "right-5" : "left-5"} top-1/2 w-28 -translate-y-1/2 rounded-2xl bg-white/14 px-3 py-2 text-xs font-black leading-4 text-white backdrop-blur-xl ring-1 ring-white/10`}>
+            {landmark.label}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -3001,11 +3222,9 @@ function buildShareProfile(spots: Spot[], analysis: Analysis, featuredSpot?: Spo
     featuredSpot && (!hasMemories || featuredSpot.status === "visited")
       ? featuredSpot
       : rankedSource[0] ?? featuredSpot ?? samples[0];
-  const nextDream = [...allSpots]
-    .filter((spot) => spot.status !== "visited" && spot.id !== bestMemory.id)
-    .sort((a, b) => b.score + b.timingEase * 3 - (a.score + a.timingEase * 3))[0] ?? bestMemory;
   const topTags = topCounts(source.flatMap((spot) => spot.tags)).slice(0, 5);
   const topEmotion = topCounts(source.map((spot) => spot.emotion))[0]?.label ?? "最高";
+  const nextDream = pickNextDream(allSpots, bestMemory, topTags);
   const identity = chooseShareIdentity(source, topTags, topEmotion);
   const palette = buildMemoryPalette(source, topTags, topEmotion);
   const memoryCount = hasMemories ? visitedMemories.length : source.length;
@@ -3043,7 +3262,26 @@ function buildShareProfile(spots: Spot[], analysis: Analysis, featuredSpot?: Spo
     museumTitle: buildMuseumTitle(topTags, topEmotion, isStartingMuseum),
     postcard: buildPostcard(topEmotion, bestMemory, isStartingMuseum),
     statusStory: getStatusStory(bestMemory),
+    travelPsyche: generateTravelPsyche(source, topTags, topEmotion),
+    emotionalLandscape: generateEmotionalLandscape(source, topTags, topEmotion, palette),
+    memoryFilm: generateMemoryFilm(source, topTags, bestMemory, identity.honorific),
+    soulProfile: generateTravelSoulProfile(source, analysis, topTags, topEmotion, nextDream),
+    nextJourneyProphecy: generateNextJourneyProphecy(nextDream, topTags, topEmotion),
   };
+}
+
+function pickNextDream(allSpots: Spot[], bestMemory: Spot, topTags: CountItem[]) {
+  const has = (label: string) => topTags.some((tag) => tag.label === label);
+  const scoreCandidate = (spot: Spot) => {
+    const tagMatch = spot.tags.reduce((total, tag) => total + (has(tag) ? 9 : 0), 0);
+    const dreamBoost = spot.status !== "visited" ? 24 : 0;
+    const futureBoost = spot.status === "dream" || spot.status === "planned" || spot.status === "want" ? 18 : 0;
+    return spot.score + spot.timingEase * 3 + tagMatch + dreamBoost + futureBoost;
+  };
+  const local = [...allSpots].filter((spot) => spot.id !== bestMemory.id);
+  const future = local.filter((spot) => spot.status !== "visited");
+  const candidates = future.length ? future : samples.filter((spot) => spot.id !== bestMemory.id);
+  return [...candidates].sort((a, b) => scoreCandidate(b) - scoreCandidate(a))[0] ?? samples.find((spot) => spot.id !== bestMemory.id) ?? samples[0];
 }
 
 function chooseShareIdentity(spots: Spot[], topTags: CountItem[], topEmotion: string) {
@@ -3259,6 +3497,138 @@ function buildPostcard(topEmotion: string, bestMemory: Spot, isStartingMuseum: b
   if (topEmotion === "静か") return "あの静けさを、忙しい日にも忘れないで。";
   if (topEmotion === "泣きそう") return "あの夜の気持ちを、忘れないで。";
   return "またこの景色を見に行こう。";
+}
+
+function generateTravelPsyche(spots: Spot[], topTags: CountItem[], topEmotion: string) {
+  const has = (label: string) => topTags.some((tag) => tag.label === label) || spots.some((spot) => spot.tags.includes(label));
+  const night = spots.some((spot) => spot.bestTime === "夜");
+  const companion = topCounts(spots.map((spot) => spot.recommendedWith))[0]?.label;
+  if ((topEmotion === "静か" || night) && (has("星空") || has("オーロラ"))) return "あなたが探しているのは、絶景ではなく「誰にも邪魔されない静けさ」です。";
+  if (has("海") || has("島") || spots.some((spot) => spot.bestSeason === "夏")) return "あなたは遠くへ行きたいのではなく、日常から少しだけ透明になれる場所を探しています。";
+  if (has("カップル") || companion === "恋人") return "あなたは場所そのものより、その時の空気・光・隣にいた人を記憶するタイプです。";
+  if (has("一生に一度") || has("世界遺産")) return "あなたは“人生で一度しか見られない景色”に、自分の節目を重ねるタイプです。";
+  if (has("夕日") || has("ドライブ")) return "あなたの旅は、帰り道と二度と戻らない時間にいちばん強く反応しています。";
+  if (has("森") || has("滝") || topEmotion === "癒された") return "あなたが求めているのは、観光ではなく、呼吸が整っていく静かな回復です。";
+  return "あなたは場所よりも、そこで心が少し変わった瞬間を旅の中心に置くタイプです。";
+}
+
+function generateEmotionalLandscape(spots: Spot[], topTags: CountItem[], topEmotion: string, palette: MemoryColor[]): EmotionalLandscape {
+  const has = (label: string) => topTags.some((tag) => tag.label === label) || spots.some((spot) => spot.tags.includes(label));
+  const labels: string[] = [];
+  const add = (label: string) => {
+    if (!labels.includes(label)) labels.push(label);
+  };
+  if (has("星空") || has("オーロラ")) add("夜空の高原");
+  if (has("海") || has("島")) add("憧れの海");
+  if (has("夕日") || has("ドライブ")) add("帰り道の丘");
+  if (has("森") || has("滝")) add("余韻の森");
+  if (has("一生に一度") || has("世界遺産")) add("一生に一度の峰");
+  if (has("カップル")) add("ふたりの入り江");
+  if (topEmotion === "静か") add("静けさの山脈");
+  add("記憶の灯台");
+  add("冒険の谷");
+
+  const selected = labels.slice(0, 5);
+  const positions = [
+    { x: 25, y: 32 },
+    { x: 69, y: 26 },
+    { x: 43, y: 56 },
+    { x: 78, y: 69 },
+    { x: 24, y: 75 },
+  ];
+
+  return {
+    title: "心の中にある絶景地図",
+    subtitle: `あなたの旅は「${topEmotion}」を中心に、${selected.slice(0, 3).join("・")}へ伸びています。`,
+    labels: selected,
+    landmarks: selected.map((label, index) => ({
+      label,
+      x: positions[index]?.x ?? 50,
+      y: positions[index]?.y ?? 50,
+      tone: palette[index % palette.length]?.hex ?? "#ff8a64",
+    })),
+  };
+}
+
+function generateMemoryFilm(spots: Spot[], topTags: CountItem[], bestMemory: Spot, honorific: string): MemoryFilm {
+  const has = (label: string) => topTags.some((tag) => tag.label === label) || spots.some((spot) => spot.tags.includes(label));
+  const title = has("カップル")
+    ? "海風が残したふたりの記憶"
+    : has("星空") || has("オーロラ")
+      ? "夜空に保存された夏"
+      : has("海") || has("島")
+        ? "海風が残した青い記憶"
+        : has("夕日") || has("ドライブ")
+          ? "帰り道に沈むオレンジ"
+          : has("一生に一度") || has("世界遺産")
+            ? "地球の果てで変わった日"
+            : has("森") || has("滝")
+              ? "呼吸を取り戻す森"
+              : "忘れたくない景色の続き";
+  const locations = [...new Set(spots.map((spot) => spot.name))].slice(0, 3);
+  const starring = spots.some((spot) => spot.recommendedWith === "恋人" || spot.tags.includes("カップル")) ? "あなたと大切な人" : "あなた";
+  const genre = has("ドライブ") || has("夕日") ? "余韻のロードムービー" : has("星空") ? "静かな冒険" : has("海") ? "青い記憶の旅" : "記憶のアートフィルム";
+  const lastScene = bestMemory.tags.includes("星空")
+    ? "満天の星を見上げた夜"
+    : bestMemory.tags.includes("夕日")
+      ? "帰り道に見た夕焼け"
+      : bestMemory.tags.includes("海")
+        ? "透明な青の前で黙った午後"
+        : `${bestMemory.name}で心が止まった瞬間`;
+  return {
+    title,
+    credit: "A FILM BY YOUR MEMORIES",
+    starring,
+    locations,
+    genre,
+    lastScene,
+    tagline: `${honorific}が残してきた、光と余白のロードショー。`,
+  };
+}
+
+function generateTravelSoulProfile(spots: Spot[], analysis: Analysis, topTags: CountItem[], topEmotion: string, nextDream: Spot): SoulProfile {
+  const has = (label: string) => topTags.some((tag) => tag.label === label) || spots.some((spot) => spot.tags.includes(label));
+  const age = clamp(24 + Math.round(analysis.averageScore / 12) + (has("一生に一度") ? 4 : 0) + (topEmotion === "静か" ? 2 : 0), 24, 39);
+  const rarity: SoulProfile["rarity"] = analysis.averageScore >= 90 || has("一生に一度") ? "SSR" : analysis.averageScore >= 84 ? "SR" : analysis.averageScore >= 72 ? "R" : "N";
+  const attributes = [
+    has("星空") || has("オーロラ") ? "夜" : "",
+    has("海") || has("島") ? "海" : "",
+    topEmotion === "静か" || topEmotion === "癒された" ? "余白" : "",
+    has("一生に一度") || has("世界遺産") ? "遠くへ行きたい衝動" : "",
+    has("夕日") ? "余韻" : "",
+    has("森") || has("滝") ? "深呼吸" : "",
+  ].filter((item): item is string => Boolean(item));
+  const weakness = [
+    has("夕日") ? "夕暮れ" : "",
+    has("海") ? "誰もいない海" : "",
+    has("星空") || has("オーロラ") ? "旅先の夜風" : "",
+    has("雲海") ? "雲の切れ間" : "",
+    has("森") ? "静かな森" : "",
+  ].filter((item): item is string => Boolean(item));
+  return {
+    age,
+    rarity,
+    attributes: (attributes.length ? attributes : ["光", "余白", "記憶"]).slice(0, 4),
+    weakness: (weakness.length ? weakness : ["夕暮れ", "誰もいない道", "旅先の夜風"]).slice(0, 3),
+    awakening: nextDream.name,
+    description: `実年齢より少し大人びた、${topEmotion}な絶景に反応する旅人。景色よりも、その瞬間に流れていた空気を覚えています。`,
+  };
+}
+
+function generateNextJourneyProphecy(nextDream: Spot, topTags: CountItem[], topEmotion: string): JourneyProphecy {
+  const has = (label: string) => topTags.some((tag) => tag.label === label);
+  const line = nextDream.tags.includes("オーロラ") || has("星空")
+    ? "あなたはまだ、“空が緑に燃える夜”を見ていません。"
+    : nextDream.tags.includes("海") || has("海")
+      ? "次にあなたを変える景色は、水平線の向こう側にあります。"
+      : nextDream.tags.includes("夕日") || has("夕日")
+        ? "次に呼ばれているのは、帰り道まで忘れられなくなる夕暮れです。"
+        : "あなたの次の1枚は、きっと日常に戻れなくなる景色です。";
+  return {
+    title: `次にあなたを変える景色は、${nextDream.name}です。`,
+    line,
+    reason: `あなたは「${topEmotion}」と${topTags.slice(0, 2).map((tag) => `#${tag.label}`).join(" / ")}の記憶に強く惹かれています。`,
+  };
 }
 
 function formatYearlyJourney(count: number) {
