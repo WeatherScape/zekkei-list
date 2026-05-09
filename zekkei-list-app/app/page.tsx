@@ -39,7 +39,7 @@ import {
 type Season = "春" | "夏" | "秋" | "冬" | "雨季" | "通年";
 type TimeSlot = "早朝" | "朝" | "昼" | "夕方" | "夜" | "いつでも";
 type Companion = "ひとり" | "友達" | "恋人" | "家族" | "いつかの自分";
-type Status = "want" | "planned" | "visited" | "dream";
+type Status = "visited" | "want" | "planned" | "dream" | "draft";
 type OnceLevel = "normal" | "special" | "once-in-life";
 type ShareType = "dna" | "bucket" | "next" | "hunter";
 type ShareLayout = "story" | "wide";
@@ -125,17 +125,19 @@ const weatherMoods = ["快晴", "夕焼け", "星空", "雨上がり", "霧", "�
 
 const statusTabs: { value: Status | "all"; label: string; short: string }[] = [
   { value: "all", label: "すべて", short: "All" },
-  { value: "visited", label: "思い出", short: "Memory" },
-  { value: "want", label: "あとで整理", short: "Draft" },
-  { value: "planned", label: "旅ログ予定", short: "Plan" },
-  { value: "dream", label: "いつか残す", short: "Dream" },
+  { value: "visited", label: "行った", short: "Visited" },
+  { value: "want", label: "行きたい", short: "Want" },
+  { value: "planned", label: "計画中", short: "Plan" },
+  { value: "dream", label: "いつか絶対", short: "Dream" },
+  { value: "draft", label: "あとで整理", short: "Draft" },
 ];
 
 const statusLabels: Record<Status, string> = {
-  want: "あとで整理",
-  planned: "旅ログ予定",
-  visited: "思い出",
-  dream: "いつか残す",
+  visited: "行った",
+  want: "行きたい",
+  planned: "計画中",
+  dream: "いつか絶対",
+  draft: "あとで整理",
 };
 
 const levelLabels: Record<OnceLevel, string> = {
@@ -866,17 +868,28 @@ export default function Home() {
       <Hero onAdd={() => setModalOpen(true)} onShare={() => openShare(recommendation.spot)} />
 
       <section className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-coral">
+              <BarChart3 className="h-4 w-4" />
+              My Zekkei Museum Summary
+            </p>
+            <h2 className="text-2xl font-black tracking-normal text-ink sm:text-3xl">あなたの旅の記憶が、ここに積み上がります。</h2>
+          </div>
+          <p className="max-w-md text-sm font-semibold leading-6 text-slate-500">行った絶景も、これから行きたい絶景も、写真・場所・感情でひとつにまとめられます。</p>
+        </div>
         <div className="grid gap-4 md:grid-cols-4">
-          <Stat icon={<MapPin />} label="訪れた絶景" value={analysis.memoryCount} note="My memories" />
-          <Stat icon={<Trophy />} label="記録した写真" value={analysis.photoCount} note="private museum" />
-          <Stat icon={<Star />} label="今年の旅ログ" value={analysis.thisYearCount} note="this year" />
+          <Stat icon={<MapPin />} label="訪れた絶景" value={analysis.memoryCount} note="行った景色" />
+          <Stat icon={<Trophy />} label="記録した写真" value={analysis.photoCount} note="自分だけのMuseum" />
+          <Stat icon={<Star />} label="今年の旅ログ" value={analysis.thisYearCount} note="今年のまとめ" />
           <Stat icon={<Sparkles />} label="思い出スコア" value={analysis.averageScore} note="Memory Score" />
         </div>
         {saveError && <p className="mt-4 rounded-2xl bg-coral/10 px-4 py-3 text-sm font-bold text-coral">{saveError}</p>}
       </section>
 
       <MemoryGallery spots={spots} analysis={analysis} onOpen={setSelectedSpot} onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
-      <StarterPacksSection onPick={applyStarterPack} onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
+      <MuseumSharePreview spots={spots} analysis={analysis} spot={recommendation.spot} onShare={() => openShare(recommendation.spot)} />
+      <YearRecapSection spots={spots} analysis={analysis} onOpen={setSelectedSpot} onShare={() => openShare(recommendation.spot)} />
       <NextRecommendationCard recommendation={recommendation} onOpen={() => setSelectedSpot(recommendation.spot)} onShare={() => openShare(recommendation.spot)} />
       <MapAndInsights spots={spots} analysis={analysis} />
 
@@ -885,9 +898,9 @@ export default function Home() {
           <div>
             <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-coral">
               <Sparkles className="h-4 w-4" />
-              Memory Dashboard
+              Memory Dashboard / 旅の記憶ダッシュボード
             </p>
-            <h2 className="text-3xl font-semibold tracking-normal text-ink sm:text-4xl">行った絶景を、忘れない形で残す。</h2>
+            <h2 className="text-3xl font-semibold tracking-normal text-ink sm:text-4xl">行った景色も、行きたい景色もここで整理する。</h2>
           </div>
           <label className="glass-panel flex h-12 w-full items-center gap-3 rounded-full px-4 lg:max-w-sm">
             <Search className="h-5 w-5 text-slate-400" />
@@ -905,7 +918,7 @@ export default function Home() {
         <div className="glass-panel mt-4 rounded-[1.75rem] p-3">
           <div className="flex items-center gap-2 px-2 pb-3 pt-1 text-sm font-bold text-slate-600">
             <Filter className="h-4 w-4 text-coral" />
-            Filter the dream
+            景色を絞り込む
           </div>
           <div className="no-scrollbar flex gap-2 overflow-x-auto pb-2">
             <FilterButton active={activeTags.length === 0} onClick={() => setActiveTags([])}>
@@ -946,6 +959,7 @@ export default function Home() {
         )}
       </section>
 
+      <StarterPacksSection onPick={applyStarterPack} onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
       <ShareSection spots={spots} top={ranked.slice(0, 3)} analysis={analysis} onShare={() => openShare()} />
       <AddZekkeiModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onAdd={addSpot} />
       <ZekkeiDetailModal spot={selectedSpot} onClose={() => setSelectedSpot(null)} onUpdate={updateSpot} onShare={(spot) => openShare(spot)} />
@@ -995,12 +1009,12 @@ function Header({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) 
           </span>
           <span>
             <span className="block text-base font-bold tracking-normal text-ink">Zekkei List</span>
-            <span className="hidden text-xs font-medium text-slate-500 sm:block">Your private museum of views</span>
+            <span className="hidden text-xs font-medium text-slate-500 sm:block">自分だけの旅の記憶Museum</span>
           </span>
         </a>
         <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
-          <a href="#list">List</a>
-          <a href="#share">Share</a>
+          <a href="#gallery">記憶を見る</a>
+          <a href="#share">共有カード</a>
         </nav>
         <div className="flex items-center gap-2">
           <button onClick={onShare} aria-label="共有カードを開く" className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-soft ring-1 ring-slate-200">
@@ -1008,7 +1022,7 @@ function Header({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) 
           </button>
           <button onClick={onAdd} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">絶景を追加</span>
+            <span className="hidden sm:inline">写真を追加</span>
           </button>
         </div>
       </div>
@@ -1109,6 +1123,145 @@ function MemoryMini({ label, value }: { label: string; value: string }) {
   );
 }
 
+function MuseumSharePreview({ spots, analysis, spot, onShare }: { spots: Spot[]; analysis: Analysis; spot: Spot; onShare: () => void }) {
+  const topTags = analysis.topTags.slice(0, 3);
+
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+      <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+        <div>
+          <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-coral">
+            <Share2 className="h-4 w-4" />
+            Share Preview / 思い出カード
+          </p>
+          <h2 className="text-3xl font-black tracking-normal text-ink sm:text-4xl">My Zekkei Museumを、ストーリーに載せたくなる1枚へ。</h2>
+          <p className="mt-4 max-w-xl text-sm font-semibold leading-7 text-slate-500">
+            記録した絶景数、旅タイプ、一番多い感情、Best Memoryを自動でまとめます。スクショするだけで、あなたの旅の記憶カードになります。
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button onClick={onShare} className="inline-flex h-13 items-center justify-center gap-2 rounded-full bg-ink px-6 text-sm font-black text-white shadow-soft">
+              <LayoutPanelTop className="h-4 w-4" />
+              思い出カードを作る
+            </button>
+            <a href="#gallery" className="inline-flex h-13 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-ink shadow-soft ring-1 ring-slate-200">
+              <Heart className="h-4 w-4 text-coral" />
+              記憶を見る
+            </a>
+          </div>
+        </div>
+
+        <button onClick={onShare} className="group mx-auto w-full max-w-sm text-left lg:ml-auto">
+          <div className="relative min-h-[560px] overflow-hidden rounded-[2.25rem] bg-ink p-6 text-white shadow-glow transition group-hover:-translate-y-1">
+            <PhotoFill src={spot.imageUrl} alt={spot.imageAlt} className="opacity-58 transition group-hover:scale-105" />
+            <div className="absolute inset-0 bg-gradient-to-br from-ink/94 via-ink/66 to-coral/38" />
+            <div className="absolute right-0 top-8 h-44 w-44 rounded-full bg-lagoon/30 blur-3xl" />
+            <div className="relative z-10 flex min-h-[512px] flex-col justify-between">
+              <div>
+                <div className="mb-8 flex items-center justify-between">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-white/52">Zekkei List</p>
+                  <Sparkles className="h-5 w-5 text-coral" />
+                </div>
+                <p className="text-sm font-bold text-white/58">My Zekkei Museum</p>
+                <h3 className="mt-3 text-4xl font-black leading-tight tracking-normal">私の旅の記憶美術館</h3>
+                <p className="mt-4 text-sm font-semibold leading-6 text-white/68">忘れたくない景色、{spots.length}個。Best Memoryは「{spot.name}」。</p>
+              </div>
+              <div>
+                <div className="grid grid-cols-2 gap-3">
+                  <ShareMetric label="記録した絶景" value={`${analysis.memoryCount}`} />
+                  <ShareMetric label="思い出Score" value={`${analysis.averageScore}`} />
+                  <ShareMetric label="多い感情" value={analysis.topEmotion} />
+                  <ShareMetric label="今年の旅" value={`${analysis.thisYearCount}`} />
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {topTags.map((tag) => (
+                    <span key={tag.label} className="rounded-full bg-white/12 px-3 py-1.5 text-xs font-black ring-1 ring-white/10">#{tag.label}</span>
+                  ))}
+                </div>
+                <div className="mt-5 rounded-[1.35rem] bg-white/12 p-4 backdrop-blur-xl">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/45">Best Memory</p>
+                  <p className="mt-2 text-lg font-black">{spot.name}</p>
+                  <p className="mt-1 text-xs font-semibold text-white/52">{spot.visitedDate} / {spot.emotion}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function YearRecapSection({ spots, analysis, onOpen, onShare }: { spots: Spot[]; analysis: Analysis; onOpen: (spot: Spot) => void; onShare: () => void }) {
+  const year = new Date().getFullYear();
+  const memories = analysis.thisYearMemories.length ? analysis.thisYearMemories : spots.filter((spot) => spot.status === "visited").slice(0, 4);
+  const best = memories[0] ?? spots[0];
+
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+      <div className="overflow-hidden rounded-[2.25rem] bg-white p-5 shadow-soft ring-1 ring-slate-200/70 sm:p-6 lg:p-7">
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-coral">
+              <CalendarDays className="h-4 w-4" />
+              {year} Recap / 今年一年のまとめ
+            </p>
+            <h2 className="text-3xl font-black tracking-normal text-ink sm:text-4xl">今年見た景色を、年末に見返したくなる形で。</h2>
+          </div>
+          <button onClick={onShare} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-5 text-sm font-black text-white shadow-soft">
+            <Share2 className="h-4 w-4" />
+            今年の思い出カード
+          </button>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <button onClick={() => best && onOpen(best)} className="relative min-h-[320px] overflow-hidden rounded-[1.75rem] bg-ink p-5 text-left text-white shadow-soft">
+            {best && <PhotoFill src={best.imageUrl} alt={best.imageAlt} />}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/18 via-black/8 to-black/78" />
+            <div className="relative z-10 flex h-full flex-col justify-between">
+              <Pill label="今年のBest Memory" light />
+              <div>
+                <p className="mb-1 text-sm font-bold text-white/65">{best?.visitedDate ?? `${year}`}</p>
+                <h3 className="text-3xl font-black leading-tight">{best?.memoryTitle ?? "今年の絶景を追加しよう"}</h3>
+                <p className="mt-3 line-clamp-3 text-sm font-semibold leading-6 text-white/68">{best?.photoStory ?? "今年の旅の写真を1枚追加すると、ここに美しくまとまります。"}</p>
+              </div>
+            </div>
+          </button>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <RecapMetric label="今年記録した絶景" value={`${analysis.thisYearCount}`} note="visited this year" />
+            <RecapMetric label="一番多い感情" value={analysis.topEmotion} note="emotion palette" />
+            <RecapMetric label="よく残した景色" value={analysis.topTags[0]?.label ?? "絶景"} note="top tag" />
+            <RecapMetric label="旅タイプ" value={analysis.travelType} note="museum style" />
+            <div className="sm:col-span-2 grid gap-3">
+              {memories.slice(0, 3).map((spot) => (
+                <button key={spot.id} onClick={() => onOpen(spot)} className="flex items-center gap-3 rounded-[1.25rem] bg-slate-50 p-3 text-left ring-1 ring-slate-100 transition hover:bg-white hover:shadow-soft">
+                  <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-ink">
+                    <PhotoFill src={spot.imageUrl} alt={spot.imageAlt} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-black text-ink">{spot.name}</span>
+                    <span className="mt-1 block truncate text-xs font-bold text-slate-400">{spot.visitedDate} / {spot.emotion}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RecapMetric({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className="rounded-[1.5rem] bg-slate-50 p-4 ring-1 ring-slate-100">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <p className="mt-2 truncate text-2xl font-black text-ink">{value}</p>
+      <p className="mt-1 text-xs font-bold text-slate-400">{note}</p>
+    </div>
+  );
+}
+
 function StarterPacksSection({ onPick, onAdd, onShare }: { onPick: (tags: string[]) => void; onAdd: () => void; onShare: () => void }) {
   const packs = [
     { title: "星空の記憶", copy: "夜・新月・鳥肌", tags: ["星空"], gradient: "from-[#111827] via-[#3544a4] to-[#f7c77b]" },
@@ -1159,7 +1312,7 @@ function StarterPacksSection({ onPick, onAdd, onShare }: { onPick: (tags: string
         </div>
         <button onClick={onShare} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-coral px-5 text-sm font-black text-white shadow-soft">
           <Share2 className="h-4 w-4" />
-          Memoriesを見る
+          My Museumを作る
         </button>
       </div>
     </section>
@@ -1176,25 +1329,34 @@ function Hero({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
           className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 shadow-soft backdrop-blur-xl"
         >
           <Sparkles className="h-4 w-4 text-coral" />
-          自分が撮った絶景を、忘れない形で。
+          あなた専用の、旅の記憶美術館。
         </motion.div>
         <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="text-4xl font-bold leading-[1.05] tracking-normal text-ink min-[380px]:text-5xl sm:text-6xl lg:text-7xl">
           Zekkei List
         </motion.h1>
-        <p className="mt-5 text-2xl font-semibold leading-relaxed text-slate-800 sm:text-3xl">行った絶景を、忘れない。</p>
+        <p className="mt-5 text-2xl font-semibold leading-relaxed text-slate-800 sm:text-3xl">スマホに眠っている絶景写真を、自分だけのMuseumに。</p>
         <p className="mt-5 max-w-xl text-base leading-8 text-slate-600 sm:text-lg">
-          スマホに眠っている旅の写真を、場所・日付・感情ごとに美しく残す。見返すたびに気持ちよくなる、あなただけの絶景メモリーギャラリー。
+          行った絶景、行きたい絶景、忘れたくない景色をひとつに。まずは1枚追加するだけで、あなたのZekkei Museumが始まります。
         </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {["まずは1枚でOK", "行った景色を残す", "行きたい景色も集める"].map((item) => (
+            <Pill key={item} label={item} />
+          ))}
+        </div>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
           <button onClick={onAdd} className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-ink px-7 text-sm font-bold text-white shadow-glow transition hover:-translate-y-0.5">
             <Plus className="h-5 w-5" />
-            写真を追加する
+            自分のMuseumを作る
           </button>
           <button onClick={onShare} className="inline-flex h-14 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/75 px-7 text-sm font-bold text-ink shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5">
             <Share2 className="h-5 w-5" />
-            Memoriesを共有
+            My Museumを共有する
           </button>
         </div>
+        <button onClick={onAdd} className="mt-3 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-coral/12 px-5 text-sm font-black text-coral ring-1 ring-coral/20">
+          <Upload className="h-4 w-4" />
+          絶景写真を1枚追加
+        </button>
       </div>
       <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative min-h-[430px] sm:min-h-[520px]">
         <div className="hero-sky grain absolute inset-0 rounded-[2.25rem] shadow-glow" />
@@ -1216,8 +1378,8 @@ function Hero({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
         </div>
         <div className="absolute right-4 top-5 z-10 hidden w-52 rounded-[1.5rem] border border-white/50 bg-white/25 p-4 text-white shadow-soft backdrop-blur-xl sm:block">
           <Wand2 className="mb-4 h-5 w-5" />
-          <p className="text-xs font-semibold text-white/75">My Zekkei Museum</p>
-          <p className="mt-1 text-lg font-bold">旅の記憶美術館</p>
+          <p className="text-xs font-semibold text-white/75">Story card</p>
+          <button onClick={onShare} className="mt-2 text-left text-lg font-bold">思い出カードを作る</button>
         </div>
       </motion.div>
     </section>
@@ -1252,7 +1414,7 @@ function NextRecommendationCard({ recommendation, onOpen, onShare }: { recommend
           <div>
             <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-sm font-bold text-white/78">
               <Navigation2 className="h-4 w-4" />
-              Memory Recap
+              Best Memory / 今いちばん大切な記憶
             </p>
             <h2 className="text-4xl font-black tracking-normal sm:text-5xl">{spot.name}</h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-white/70">一番心に残っている写真は、{spot.emotion}の記憶として残っています。{spot.favoriteMoment}を、いつでも見返せる場所に。</p>
@@ -1273,7 +1435,7 @@ function NextRecommendationCard({ recommendation, onOpen, onShare }: { recommend
             <BestTimingPanel spot={spot} dark compact />
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button onClick={onOpen} className="h-12 rounded-full bg-white text-sm font-black text-ink shadow-soft">思い出を見る</button>
-              <button onClick={onShare} className="h-12 rounded-full bg-coral text-sm font-black text-white shadow-soft">Museum共有</button>
+              <button onClick={onShare} className="h-12 rounded-full bg-coral text-sm font-black text-white shadow-soft">共有カード</button>
             </div>
           </div>
         </div>
@@ -1300,7 +1462,7 @@ function MapAndInsights({ spots, analysis }: { spots: Spot[]; analysis: Analysis
         <div>
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-coral">
             <Map className="h-4 w-4" />
-            Memory Map & Palette
+            Memory Map & Palette / 場所と感情のマップ
           </p>
           <h2 className="text-3xl font-semibold tracking-normal text-ink sm:text-4xl">行った場所と、その時の感情まで美しく見える化。</h2>
         </div>
@@ -1341,9 +1503,9 @@ function MapAndInsights({ spots, analysis }: { spots: Spot[]; analysis: Analysis
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-4">
-        <DistributionCard title="Memory Season" items={analysis.topSeasons} total={spots.length} />
-        <DistributionCard title="Tag Signal" items={analysis.topTags} total={spots.length} />
-        <DistributionCard title="Photo Time" items={analysis.topTimes} total={spots.length} />
+        <DistributionCard title="Memory Season / よく残す季節" items={analysis.topSeasons} total={spots.length} />
+        <DistributionCard title="Tag Signal / よく残している景色" items={analysis.topTags} total={spots.length} />
+        <DistributionCard title="Photo Time / よく撮る時間帯" items={analysis.topTimes} total={spots.length} />
         <BucketProgress analysis={analysis} />
       </div>
     </section>
@@ -1360,7 +1522,7 @@ function WorldZekkeiMap({ spots }: { spots: Spot[] }) {
       <div className="absolute inset-5 rounded-[1.75rem] border border-white/10" />
       <div className="relative z-10 flex items-start justify-between gap-4">
         <div>
-          <p className="mb-2 text-sm font-semibold text-white/55">Visual location</p>
+          <p className="mb-2 text-sm font-semibold text-white/55">Visual location / 場所の記憶</p>
           <h3 className="text-3xl font-black tracking-normal">Memory Map</h3>
         </div>
         <div className="rounded-2xl bg-white/10 px-4 py-3 text-right backdrop-blur-xl">
@@ -1395,7 +1557,7 @@ function WorldZekkeiMap({ spots }: { spots: Spot[] }) {
 
       {top && (
         <div className="absolute bottom-10 left-8 right-8 z-20 rounded-[1.5rem] border border-white/12 bg-white/10 p-4 backdrop-blur-xl sm:left-10 sm:right-10">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/45">Current north star</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/45">今いちばん大切な記憶</p>
           <div className="mt-2 flex items-center justify-between gap-4">
             <div>
               <p className="text-xl font-black">{top.memoryTitle}</p>
@@ -1424,7 +1586,7 @@ function WorldBlobs() {
 
 function StatusTabs({ status, spots, onChange }: { status: Status | "all"; spots: Spot[]; onChange: (status: Status | "all") => void }) {
   return (
-    <div className="glass-panel -mx-1 flex gap-2 overflow-x-auto rounded-[1.75rem] p-2 sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible">
+    <div className="glass-panel -mx-1 flex gap-2 overflow-x-auto rounded-[1.75rem] p-2 sm:mx-0 lg:grid lg:grid-cols-6 lg:overflow-visible">
       {statusTabs.map((tab) => {
         const count = tab.value === "all" ? spots.length : spots.filter((spot) => spot.status === tab.value).length;
         const active = status === tab.value;
@@ -1432,7 +1594,7 @@ function StatusTabs({ status, spots, onChange }: { status: Status | "all"; spots
           <button
             key={tab.value}
             onClick={() => onChange(tab.value)}
-            className={`flex min-w-[136px] items-center justify-between rounded-[1.25rem] px-4 py-3 text-left transition sm:min-w-0 ${active ? "bg-ink text-white shadow-soft" : "bg-white/60 text-slate-600 hover:bg-white"}`}
+            className={`flex min-w-[136px] items-center justify-between rounded-[1.25rem] px-4 py-3 text-left transition lg:min-w-0 ${active ? "bg-ink text-white shadow-soft" : "bg-white/60 text-slate-600 hover:bg-white"}`}
           >
             <span>
               <span className="block text-sm font-black">{tab.label}</span>
@@ -1645,7 +1807,7 @@ function ZekkeiDetailModal({
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {(["want", "planned", "dream", "visited"] as Status[]).map((item) => (
+                  {(["visited", "want", "planned", "dream", "draft"] as Status[]).map((item) => (
                     <button
                       key={item}
                       onClick={() => onUpdate(spot.id, { status: item })}
@@ -1700,17 +1862,18 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.location.trim()) return;
+    if (!form.memoryTitle.trim() || !form.location.trim()) return;
     const safeTags = form.tags.length ? form.tags : ["一生に一度"];
     const safeConditions = form.conditions.length ? form.conditions : ["晴れ"];
+    const safeName = form.name.trim() || form.memoryTitle.trim();
     onAdd({
       ...form,
-      name: form.name.trim(),
+      name: safeName,
       location: form.location.trim(),
       country: form.country.trim() || "日本",
       reason: form.reason.trim() || form.photoStory.trim() || "この景色を、自分の目で見て、忘れたくなかった。",
       memo: form.memo.trim() || form.favoriteMoment.trim() || "写真を見るたび、その場所の空気まで思い出せる。",
-      memoryTitle: form.memoryTitle.trim() || `${form.name.trim()}で見た、忘れたくない光`,
+      memoryTitle: form.memoryTitle.trim(),
       photoStory: form.photoStory.trim() || form.memo.trim() || "この写真を見ると、旅の空気まで戻ってくる。",
       favoriteMoment: form.favoriteMoment.trim() || `${form.bestTime}に景色の色が変わった瞬間`,
       score: computedScore,
@@ -1748,8 +1911,8 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/90 px-5 py-4 backdrop-blur-xl sm:px-7">
               <div>
-                <p className="text-sm font-bold text-coral">Add a memory photo</p>
-                <h2 className="text-2xl font-bold text-ink">思い出写真を追加する</h2>
+                <p className="text-sm font-bold text-coral">Museumに飾る絶景を追加</p>
+                <h2 className="text-2xl font-bold text-ink">忘れたくない景色を1枚残す</h2>
               </div>
               <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                 <X className="h-5 w-5" />
@@ -1761,9 +1924,9 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
                 <PhotoUploader src={form.imageUrl} uploading={uploading} error={photoError} onChange={handlePhoto} />
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Text label="思い出タイトル" value={form.memoryTitle} placeholder="例：星が降ってきた夜" onChange={(value) => setForm((current) => ({ ...current, memoryTitle: value }))} />
-                  <Text label="訪れた日" value={form.visitedDate} placeholder="例：2026-05-08" onChange={(value) => setForm((current) => ({ ...current, visitedDate: value }))} />
-                  <Text label="スポット名" value={form.name} placeholder="例：阿智村の星空" onChange={(value) => setForm((current) => ({ ...current, name: value }))} required />
+                  <Text label="写真タイトル" value={form.memoryTitle} placeholder="例：星が降ってきた夜" onChange={(value) => setForm((current) => ({ ...current, memoryTitle: value }))} required />
+                  <Text label="日付" value={form.visitedDate} placeholder="例：2026-05-09" onChange={(value) => setForm((current) => ({ ...current, visitedDate: value }))} />
+                  <Text label="スポット名" value={form.name} placeholder="例：阿智村の星空" onChange={(value) => setForm((current) => ({ ...current, name: value }))} />
                   <Text label="場所" value={form.location} placeholder="例：長野県・阿智村" onChange={(value) => setForm((current) => ({ ...current, location: value }))} required />
                   <Text label="国・地域" value={form.country} placeholder="例：日本 / ボリビア" onChange={(value) => setForm((current) => ({ ...current, country: value }))} />
                   <FieldSelect label="カテゴリ" value={form.category} options={categories} onChange={(value) => setForm((current) => ({ ...current, category: value }))} />
@@ -1774,7 +1937,7 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
                   <textarea
                     value={form.photoStory}
                     onChange={(event) => setForm((current) => ({ ...current, photoStory: event.target.value, reason: event.target.value }))}
-                    placeholder="この写真を見ると、どんな空気や気持ちを思い出す？"
+                    placeholder="一言だけでもOK。この写真を見ると、どんな空気や気持ちを思い出す？"
                     rows={3}
                     className="w-full resize-none rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-ink outline-none transition focus:border-coral focus:bg-white"
                   />
@@ -1807,6 +1970,7 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
               </div>
 
               <div className="grid content-start gap-4">
+                <MemoryFormPreview form={form} score={computedScore} />
                 <div className="sticky top-24 rounded-[2rem] bg-ink p-5 text-white shadow-glow">
                   <p className="mb-2 text-sm font-bold text-white/55">Memory Score</p>
                   <div className="flex items-center justify-between gap-4">
@@ -1824,7 +1988,7 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
                   </div>
                   <div className="mt-5 grid gap-3">
                     <Segment label="思い出レベル" value={form.onceInLifeLevel} options={["normal", "special", "once-in-life"]} onChange={(value) => setForm((current) => ({ ...current, onceInLifeLevel: value as OnceLevel }))} />
-                    <Segment label="保存先" value={form.status} options={["visited", "want", "planned", "dream"]} labels={statusLabels} onChange={(value) => setForm((current) => ({ ...current, status: value as Status }))} />
+                    <Segment label="保存先" value={form.status} options={["visited", "want", "planned", "dream", "draft"]} labels={statusLabels} onChange={(value) => setForm((current) => ({ ...current, status: value as Status }))} />
                   </div>
                 </div>
               </div>
@@ -1865,6 +2029,30 @@ function PhotoUploader({ src, uploading, error, onChange }: { src: string; uploa
   );
 }
 
+function MemoryFormPreview({ form, score }: { form: SpotDraft; score: number }) {
+  return (
+    <div className="overflow-hidden rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200/70">
+      <div className="relative h-56 bg-ink text-white">
+        <PhotoFill src={form.imageUrl} alt={form.imageAlt} className="opacity-82" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/4 to-black/76" />
+        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+          <div>
+            <p className="mb-1 text-xs font-bold text-white/65">入力中のプレビュー</p>
+            <h3 className="line-clamp-2 text-2xl font-black">{form.memoryTitle || "写真タイトルを入れるとここに表示"}</h3>
+            <p className="mt-1 text-xs font-semibold text-white/58">{form.location || "場所未設定"} / {form.emotion}</p>
+          </div>
+          <Score score={score} light />
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 p-3">
+        <MemoryMini label="保存先" value={statusLabels[form.status]} />
+        <MemoryMini label="天気" value={form.weatherMood} />
+        <MemoryMini label="誰と" value={form.recommendedWith} />
+      </div>
+    </div>
+  );
+}
+
 function ShareCardModal({
   isOpen,
   onClose,
@@ -1886,10 +2074,10 @@ function ShareCardModal({
   const spot = featuredSpot ?? recommendation.spot;
 
   const copyShareText = async () => {
-    const text = `My Zekkei Memories: ${analysis.travelType}\n記録した絶景写真: ${analysis.photoCount}枚\n一番心に残った景色: ${spot.name}\n行った絶景を、忘れない。 #ZekkeiList`;
+    const text = `My Zekkei Museum: ${analysis.travelType}\n記録した絶景写真: ${analysis.photoCount}枚\n一番心に残った景色: ${spot.name}\n行った絶景を、忘れない。 #ZekkeiList`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: "My Zekkei Memories", text });
+        await navigator.share({ title: "My Zekkei Museum", text });
       } else {
         await navigator.clipboard.writeText(text);
         setCopied(true);
@@ -1924,8 +2112,8 @@ function ShareCardModal({
             </div>
             <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[0.72fr_1fr]">
               <div className="grid content-start gap-4">
-                <Segment label="カードタイプ" value={type} options={["dna", "bucket", "next", "hunter"]} labels={{ dna: "My Zekkei Memories", bucket: "旅の記憶美術館", next: "一番心に残った景色", hunter: "Memory Collector" }} onChange={(value) => setType(value as ShareType)} light={false} />
-                <Segment label="サイズ" value={layout} options={["story", "wide"]} labels={{ story: "Story", wide: "X / Wide" }} onChange={(value) => setLayout(value as ShareLayout)} light={false} />
+                <Segment label="カードタイプ" value={type} options={["dna", "bucket", "next", "hunter"]} labels={{ dna: "My Zekkei Museum", bucket: "旅の記憶美術館", next: "Best Memory", hunter: "Memory Collector" }} onChange={(value) => setType(value as ShareType)} light={false} />
+                <Segment label="サイズ" value={layout} options={["story", "wide"]} labels={{ story: "Instagram Story", wide: "X / Wide" }} onChange={(value) => setLayout(value as ShareLayout)} light={false} />
                 <div className="rounded-[1.5rem] bg-slate-50 p-4 ring-1 ring-slate-100">
                   <p className="text-sm font-black text-ink">スクショのコツ</p>
                   <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
@@ -1965,7 +2153,7 @@ function ShareCard({
   const story = layout === "story";
   const title =
     type === "dna"
-      ? "My Zekkei Memories"
+      ? "My Zekkei Museum"
       : type === "bucket"
         ? "旅の記憶美術館"
         : type === "next"
@@ -2006,14 +2194,14 @@ function ShareCard({
             </div>
           ) : (
             <div className={`grid gap-2 sm:gap-3 ${story ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
-              <ShareMetric label="思い出写真" value={`${analysis.photoCount}`} />
+              <ShareMetric label="記録した絶景数" value={`${analysis.memoryCount}`} />
               <ShareMetric label="平均Score" value={`${analysis.averageScore}`} />
               <ShareMetric label="多い感情" value={analysis.topEmotion} />
               <ShareMetric label="今年の旅" value={`${analysis.thisYearCount}`} />
             </div>
           )}
           <div className="mt-5 flex flex-wrap gap-2">
-            {analysis.topTags.slice(0, story ? 5 : 7).map((tag) => (
+            {analysis.topTags.slice(0, story ? 3 : 5).map((tag) => (
               <span key={tag.label} className="rounded-full bg-white/12 px-3 py-1.5 text-xs font-black ring-1 ring-white/10">#{tag.label}</span>
             ))}
           </div>
@@ -2053,7 +2241,7 @@ function ShareSection({ spots, top, analysis, onShare }: { spots: Spot[]; top: S
                 <Share2 className="h-4 w-4" />
                 Screenshot ready
               </p>
-              <h2 className="text-4xl font-black tracking-normal sm:text-5xl">My Zekkei Memories</h2>
+              <h2 className="text-4xl font-black tracking-normal sm:text-5xl">My Zekkei Museum</h2>
               <p className="mt-3 max-w-xl text-base leading-7 text-white/62">行った絶景を、忘れない。{spots.length}個の記憶と{analysis.photoCount}枚の写真から見えた旅の記憶タイプは「{analysis.travelType}」。</p>
             </div>
             <button onClick={onShare} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-ink shadow-soft">
@@ -2094,13 +2282,13 @@ function MobileBottomDock({ onAdd, onShare }: { onAdd: () => void; onShare: () =
   return (
     <div className="fixed inset-x-3 bottom-3 z-40 rounded-[1.5rem] border border-white/70 bg-white/82 p-2 shadow-glow backdrop-blur-2xl sm:hidden">
       <div className="grid grid-cols-4 gap-1">
-        <DockButton icon={<Sparkles />} label="Gallery" onClick={() => jump("gallery")} />
+        <DockButton icon={<Sparkles />} label="記憶" onClick={() => jump("gallery")} />
         <DockButton icon={<Map />} label="Map" onClick={() => jump("map")} />
         <button onClick={onAdd} className="flex min-h-14 flex-col items-center justify-center rounded-[1.15rem] bg-ink px-2 text-xs font-black text-white shadow-soft">
           <Plus className="mb-1 h-5 w-5" />
           写真
         </button>
-        <DockButton icon={<Share2 />} label="Share" onClick={onShare} />
+        <DockButton icon={<Share2 />} label="共有" onClick={onShare} />
       </div>
     </div>
   );
@@ -2366,16 +2554,32 @@ function BucketProgress({ analysis }: { analysis: Analysis }) {
 
 function Empty({ onAdd }: { onAdd: () => void }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-panel mt-8 rounded-[2rem] p-8 text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-white">
-        <Search className="h-6 w-6" />
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-panel mt-8 overflow-hidden rounded-[2rem] p-5 text-center sm:p-8">
+      <div className="mx-auto mb-5 grid max-w-md grid-cols-3 gap-3">
+        {[photoLibrary.stars, photoLibrary.beach, photoLibrary.forest].map((src, index) => (
+          <div key={src} className={`relative overflow-hidden rounded-[1.25rem] bg-ink shadow-soft ${index === 1 ? "h-32" : "mt-5 h-24"}`}>
+            <PhotoFill src={src} alt="サンプル絶景写真" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/8 to-black/42" />
+          </div>
+        ))}
       </div>
-      <h3 className="text-2xl font-bold text-ink">条件に合う絶景がありません</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">新しい絶景を追加するか、フィルターを少しゆるめてみてください。</p>
-      <button onClick={onAdd} className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-6 text-sm font-bold text-white shadow-soft">
-        <Plus className="h-4 w-4" />
-        絶景を追加する
-      </button>
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-white">
+        <Upload className="h-6 w-6" />
+      </div>
+      <h3 className="text-2xl font-black text-ink">まだMuseumは空です。</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-slate-500">
+        まずはスマホに眠っている絶景写真を1枚追加してみましょう。場所・日付・感情を添えるだけで、旅の記憶が美しく残ります。
+      </p>
+      <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+        <button onClick={onAdd} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-6 text-sm font-bold text-white shadow-soft">
+          <Plus className="h-4 w-4" />
+          絶景写真を1枚追加
+        </button>
+        <a href="#gallery" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-ink shadow-soft ring-1 ring-slate-200">
+          <Search className="h-4 w-4" />
+          サンプルを見る
+        </a>
+      </div>
     </motion.div>
   );
 }
@@ -2613,7 +2817,7 @@ function companionValue(value: unknown): Companion {
 }
 
 function statusValue(value: unknown): Status {
-  return ["want", "planned", "visited", "dream"].includes(String(value)) ? (value as Status) : "visited";
+  return ["visited", "want", "planned", "dream", "draft"].includes(String(value)) ? (value as Status) : "visited";
 }
 
 function onceLevelValue(value: unknown, fallback: OnceLevel): OnceLevel {
