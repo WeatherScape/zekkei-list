@@ -1071,6 +1071,7 @@ function Header({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) 
           </span>
         </a>
         <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
+          <a href="#guide">使い方</a>
           <a href="#gallery">記憶を見る</a>
           <a href="#share">共有カード</a>
         </nav>
@@ -1570,6 +1571,17 @@ function Hero({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
           <Upload className="h-4 w-4" />
           絶景写真を1枚追加
         </button>
+        <a href="#guide" className="mt-5 grid max-w-xl grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[1.5rem] border border-white/70 bg-white/82 p-3 text-left shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-glow">
+          <span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-[1rem] bg-ink text-white">
+            <Map className="h-5 w-5 text-coral" />
+            <motion.span className="absolute inset-0 rounded-full border border-coral/50" animate={{ scale: [0.75, 1.45], opacity: [0.5, 0] }} transition={{ duration: 1.9, repeat: Infinity }} />
+          </span>
+          <span>
+            <span className="block text-sm font-black text-ink">新しい導入と、動く記憶の地図を追加しました</span>
+            <span className="mt-0.5 block text-xs font-bold leading-5 text-slate-500">写真を追加すると、旅が地図とAI診断に変わる流れを見られます。</span>
+          </span>
+          <span className="hidden rounded-full bg-ink px-3 py-1 text-[11px] font-black text-white sm:block">見る</span>
+        </a>
       </div>
       <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative min-h-[430px] sm:min-h-[520px]">
         <div className="hero-sky grain absolute inset-0 rounded-[2.25rem] shadow-glow" />
@@ -1593,6 +1605,17 @@ function Hero({ onAdd, onShare }: { onAdd: () => void; onShare: () => void }) {
           <Wand2 className="mb-4 h-5 w-5" />
           <p className="text-xs font-semibold text-white/75">Story card</p>
           <button onClick={onShare} className="mt-2 text-left text-lg font-bold">思い出カードを作る</button>
+        </div>
+        <div className="absolute left-4 top-5 z-10 hidden w-56 rounded-[1.5rem] border border-white/45 bg-ink/38 p-4 text-white shadow-soft backdrop-blur-xl sm:block">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">Memory Atlas</p>
+          <svg className="mt-3 h-16 w-full" viewBox="0 0 190 64" aria-hidden="true">
+            <path d="M8 48 C38 10 62 50 91 25 C126 -4 135 54 181 16" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="8" strokeLinecap="round" />
+            <motion.path d="M8 48 C38 10 62 50 91 25 C126 -4 135 54 181 16" fill="none" stroke="#ff8b68" strokeWidth="3" strokeLinecap="round" strokeDasharray="10 8" animate={{ strokeDashoffset: [0, -64] }} transition={{ duration: 3.6, repeat: Infinity, ease: "linear" }} />
+            {[{ x: 8, y: 48 }, { x: 91, y: 25 }, { x: 181, y: 16 }].map((pin) => (
+              <circle key={`${pin.x}-${pin.y}`} cx={pin.x} cy={pin.y} r="5" fill="#ffffff" />
+            ))}
+          </svg>
+          <p className="mt-2 text-sm font-black">記憶が地図になる</p>
         </div>
       </motion.div>
     </section>
@@ -1649,7 +1672,7 @@ function AdventureGuideSection({ spots, analysis, onAdd, onShare }: { spots: Spo
   ];
 
   return (
-    <section className="relative mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+    <section id="guide" className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 pb-8 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-[2.75rem] bg-ink text-white shadow-glow">
         <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[0.82fr_1.18fr] lg:p-8">
           <div className="pointer-events-none absolute -left-24 top-8 h-72 w-72 rounded-full bg-lagoon/20 blur-3xl" />
