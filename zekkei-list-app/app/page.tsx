@@ -45,6 +45,10 @@ type Status = "visited" | "want" | "planned" | "dream" | "draft";
 type OnceLevel = "normal" | "special" | "once-in-life";
 type ShareType = "psyche" | "landscape" | "film" | "soul" | "story-poster" | "museum-card" | "x-card";
 type ShareLayout = "story" | "wide";
+type WizardStep = "photo" | "place" | "emotion";
+type GalleryLayout = "grid" | "masonry";
+type GallerySort = "score" | "date" | "emotion" | "favorite";
+type GalleryFilter = "all" | "visited" | "want" | "dream" | "favorite";
 
 type Coordinates = {
   lat: number;
@@ -156,6 +160,8 @@ const tags = [
   "砂漠",
   "花畑",
   "森",
+  "癒し",
+  "冒険",
   "海外",
   "日本",
 ];
@@ -165,7 +171,7 @@ const times: TimeSlot[] = ["早朝", "朝", "昼", "夕方", "夜", "いつで�
 const companions: Companion[] = ["ひとり", "友達", "恋人", "家族", "いつかの自分"];
 const categories = ["星空", "海", "山", "島", "森", "雪景色", "世界遺産", "砂漠", "花畑", "ドライブ"];
 const purposeTags = ["写真で残したい", "体験したい", "癒されたい", "挑戦したい", "記念日に行きたい", "人生を変えたい"];
-const emotionTags = ["泣きそう", "癒された", "鳥肌", "青春", "静か", "最高", "また行きたい", "人生ベスト"];
+const emotionTags = ["静か", "鳥肌", "泣きそう", "また行きたい", "人生ベスト", "青春", "癒された", "奇跡の天気", "最高", "風が気持ちいい"];
 const weatherMoods = ["快晴", "夕焼け", "星空", "雨上がり", "霧", "雪", "風が気持ちいい", "奇跡の天気"];
 
 const statusTabs: { value: Status | "all"; label: string; short: string }[] = [
@@ -817,6 +823,7 @@ export default function Home() {
   const [status, setStatus] = useState<Status | "all">("all");
   const [query, setQuery] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -887,6 +894,8 @@ export default function Home() {
       },
       ...current,
     ]);
+    setToast("1枚の記憶が追加されました ✦");
+    window.setTimeout(() => setToast(""), 3200);
   };
 
   const updateSpot = (id: string, patch: Partial<Spot>) => {
@@ -934,7 +943,7 @@ export default function Home() {
         {saveError && <p className="mt-4 rounded-2xl bg-coral/10 px-4 py-3 text-sm font-bold text-coral">{saveError}</p>}
       </section>
 
-      <MemoryGallery spots={spots} analysis={analysis} onOpen={setSelectedSpot} onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
+      <MemoryGallery spots={spots} analysis={analysis} onOpen={setSelectedSpot} onAdd={() => setModalOpen(true)} onShare={() => openShare()} onToggleSaved={(spot) => updateSpot(spot.id, { saved: !spot.saved })} />
       <MuseumSharePreview spots={spots} analysis={analysis} spot={recommendation.spot} onShare={() => openShare(recommendation.spot)} />
       <YearRecapSection spots={spots} analysis={analysis} onOpen={setSelectedSpot} onShare={() => openShare(recommendation.spot)} />
       <NextRecommendationCard recommendation={recommendation} onOpen={() => setSelectedSpot(recommendation.spot)} onShare={() => openShare(recommendation.spot)} />
@@ -1008,10 +1017,11 @@ export default function Home() {
 
       <StarterPacksSection onPick={applyStarterPack} onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
       <ShareSection spots={spots} top={ranked.slice(0, 3)} analysis={analysis} onShare={() => openShare()} />
-      <AddZekkeiModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onAdd={addSpot} />
+      <AddZekkeiModal isOpen={modalOpen} spots={spots} onClose={() => setModalOpen(false)} onAdd={addSpot} />
       <ZekkeiDetailModal spot={selectedSpot} onClose={() => setSelectedSpot(null)} onUpdate={updateSpot} onShare={(spot) => openShare(spot)} />
       <ShareCardModal isOpen={shareOpen} onClose={() => setShareOpen(false)} spots={spots} analysis={analysis} recommendation={recommendation} featuredSpot={shareSpot} />
       <MobileBottomDock onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
+      <MemoryToast message={toast} />
     </main>
   );
 }
@@ -1083,16 +1093,33 @@ function MemoryGallery({
   onOpen,
   onAdd,
   onShare,
+  onToggleSaved,
 }: {
   spots: Spot[];
   analysis: Analysis;
   onOpen: (spot: Spot) => void;
   onAdd: () => void;
   onShare: () => void;
+  onToggleSaved: (spot: Spot) => void;
 }) {
+  const [layout, setLayout] = useState<GalleryLayout>("grid");
+  const [sort, setSort] = useState<GallerySort>("date");
+  const [filter, setFilter] = useState<GalleryFilter>("all");
   const memories = spots.filter((spot) => spot.status === "visited").sort((a, b) => b.score - a.score);
   const featured = memories[0] ?? spots[0];
-  const tiles = memories.length ? memories.slice(0, 7) : spots.slice(0, 7);
+  const gallerySpots = useMemo(() => {
+    const filtered = spots.filter((spot) => {
+      if (filter === "favorite") return spot.saved;
+      if (filter === "all") return true;
+      return spot.status === filter;
+    });
+    return [...filtered].sort((a, b) => {
+      if (sort === "favorite") return Number(b.saved) - Number(a.saved) || b.score - a.score;
+      if (sort === "date") return new Date(b.visitedDate).getTime() - new Date(a.visitedDate).getTime();
+      if (sort === "emotion") return a.emotion.localeCompare(b.emotion, "ja") || b.score - a.score;
+      return b.score - a.score;
+    });
+  }, [filter, sort, spots]);
 
   return (
     <section id="gallery" className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
@@ -1107,7 +1134,7 @@ function MemoryGallery({
         <div className="flex gap-2">
           <button onClick={onShare} className="hidden h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-black text-ink shadow-soft ring-1 ring-slate-200 sm:inline-flex">
             <Share2 className="h-4 w-4" />
-            Memoriesを共有
+            思い出カードを作る
           </button>
           <button onClick={onAdd} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-black text-white shadow-soft">
             <Upload className="h-4 w-4" />
@@ -1117,8 +1144,8 @@ function MemoryGallery({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-        <button onClick={() => onOpen(featured)} className="group grain relative min-h-[520px] overflow-hidden rounded-[2.25rem] bg-ink p-6 text-left text-white shadow-glow">
-          <PhotoFill src={featured.imageUrl} alt={featured.imageAlt} className="transition duration-700 group-hover:scale-105" />
+        <button onClick={() => onOpen(featured)} className="group grain relative min-h-[520px] overflow-hidden rounded-[2.25rem] bg-ink p-6 text-left text-white shadow-glow transition duration-200 ease-out hover:scale-[1.015]">
+          <PhotoFill src={featured.imageUrl} alt={featured.imageAlt} className="transition duration-200 ease-out group-hover:scale-[1.03] group-hover:brightness-[1.08]" priority />
           <div className="absolute inset-0 bg-gradient-to-b from-black/18 via-black/12 to-black/78" />
           <div className="relative z-10 flex h-full flex-col justify-between">
             <div className="flex justify-between gap-4">
@@ -1134,22 +1161,85 @@ function MemoryGallery({
         </button>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2">
-          {tiles.slice(1).map((spot, index) => (
-            <button
+          {gallerySpots.slice(0, 6).map((spot, index) => (
+            <article
               key={spot.id}
               onClick={() => onOpen(spot)}
-              className={`group relative overflow-hidden rounded-[1.75rem] bg-ink text-left text-white shadow-soft ${index === 0 ? "min-h-[250px] sm:col-span-2 lg:col-span-1" : "min-h-[210px]"}`}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") onOpen(spot);
+              }}
+              role="button"
+              tabIndex={0}
+              className={`group relative overflow-hidden rounded-[1.75rem] bg-ink text-left text-white shadow-soft transition duration-200 ease-out hover:scale-[1.03] ${index === 0 ? "min-h-[250px] sm:col-span-2 lg:col-span-1" : "min-h-[210px]"}`}
             >
-              <PhotoFill src={spot.imageUrl} alt={spot.imageAlt} className="transition duration-700 group-hover:scale-105" />
+              <PhotoFill src={spot.imageUrl} alt={spot.imageAlt} className="transition duration-200 ease-out group-hover:scale-[1.03] group-hover:brightness-[1.08]" />
               <div className="absolute inset-0 bg-gradient-to-b from-black/12 via-black/0 to-black/72" />
+              <button
+                aria-label="お気に入りを切り替える"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleSaved(spot);
+                }}
+                className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/18 text-white backdrop-blur-xl ring-1 ring-white/25"
+              >
+                <Heart className={`h-4 w-4 ${spot.saved ? "fill-current text-coral" : ""}`} />
+              </button>
               <div className="absolute bottom-4 left-4 right-4">
                 <p className="text-xs font-bold text-white/62">{spot.visitedDate} / {spot.weatherMood}</p>
                 <p className="mt-1 line-clamp-2 text-lg font-black">{spot.name}</p>
+                <AnimatedScoreBar score={spot.score} light />
               </div>
-            </button>
+            </article>
           ))}
         </div>
       </div>
+
+      <div className="mt-5 rounded-[1.75rem] bg-white p-3 shadow-soft ring-1 ring-slate-200/70">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto">
+            <GalleryChip active={layout === "grid"} onClick={() => setLayout("grid")}>Grid</GalleryChip>
+            <GalleryChip active={layout === "masonry"} onClick={() => setLayout("masonry")}>Masonry</GalleryChip>
+          </div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto">
+            {(["score", "date", "emotion", "favorite"] as GallerySort[]).map((item) => (
+              <GalleryChip key={item} active={sort === item} onClick={() => setSort(item)}>
+                {item === "score" ? "スコア高順" : item === "date" ? "日付新順" : item === "emotion" ? "感情順" : "お気に入り優先"}
+              </GalleryChip>
+            ))}
+          </div>
+        </div>
+        <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
+          {(["all", "visited", "want", "dream", "favorite"] as GalleryFilter[]).map((item) => (
+            <GalleryChip key={item} active={filter === item} onClick={() => setFilter(item)}>
+              {item === "all" ? "すべて" : item === "favorite" ? "お気に入り" : statusLabels[item]}
+            </GalleryChip>
+          ))}
+        </div>
+      </div>
+
+      {gallerySpots.length ? (
+        <div className={layout === "masonry" ? "mt-5 columns-1 gap-4 sm:columns-2 xl:columns-3" : "mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"}>
+          {gallerySpots.map((spot, index) => (
+            <MemoryGalleryCard
+              key={spot.id}
+              spot={spot}
+              index={index}
+              masonry={layout === "masonry"}
+              onOpen={() => onOpen(spot)}
+              onToggleSaved={() => onToggleSaved(spot)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-5 rounded-[2rem] bg-white p-8 text-center shadow-soft ring-1 ring-slate-200">
+          <p className="text-xl font-black text-ink">この条件のMuseumはまだ空です。</p>
+          <p className="mt-2 text-sm font-semibold text-slate-500">まずは1枚、スマホに眠っている絶景写真を飾ってみましょう。</p>
+          <button onClick={onAdd} className="mt-5 inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-sm font-black text-white shadow-soft">
+            <Upload className="h-4 w-4" />
+            絶景写真を1枚追加
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 grid gap-3 rounded-[1.75rem] bg-white p-4 shadow-soft ring-1 ring-slate-200/70 sm:grid-cols-4">
         <MemoryMini label="一番多い感情" value={analysis.topEmotion} />
@@ -1158,6 +1248,53 @@ function MemoryGallery({
         <MemoryMini label="今年の写真" value={analysis.thisYearCount === 0 ? "これから" : `${analysis.thisYearCount}枚`} />
       </div>
     </section>
+  );
+}
+
+function GalleryChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button onClick={onClick} className={`h-10 shrink-0 rounded-full px-4 text-sm font-black transition ${active ? "bg-ink text-white shadow-soft" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+      {children}
+    </button>
+  );
+}
+
+function MemoryGalleryCard({ spot, index, masonry, onOpen, onToggleSaved }: { spot: Spot; index: number; masonry: boolean; onOpen: () => void; onToggleSaved: () => void }) {
+  const heights = ["h-80", "h-96", "h-[22rem]", "h-[28rem]"];
+  const height = masonry ? heights[index % heights.length] : "h-80";
+  return (
+    <article
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") onOpen();
+      }}
+      role="button"
+      tabIndex={0}
+      className={`group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-[2rem] bg-ink text-left text-white shadow-soft transition duration-200 ease-out hover:scale-[1.03] ${height}`}
+    >
+      <PhotoFill src={spot.imageUrl} alt={spot.imageAlt} className="transition duration-200 ease-out group-hover:scale-[1.03] group-hover:brightness-[1.08]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/14 via-black/4 to-black/78" />
+      <button
+        aria-label="お気に入りを切り替える"
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggleSaved();
+        }}
+        className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/18 text-white backdrop-blur-xl ring-1 ring-white/25"
+      >
+        <Heart className={`h-5 w-5 ${spot.saved ? "fill-current text-coral" : ""}`} />
+      </button>
+      <div className="absolute bottom-5 left-5 right-5 z-10">
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Pill label={statusLabels[spot.status]} light />
+          <Pill label={spot.emotion} light />
+        </div>
+        <p className="text-xs font-bold text-white/62">{spot.visitedDate} / {spot.location}</p>
+        <h3 className="mt-1 line-clamp-2 text-2xl font-black leading-tight">{spot.memoryTitle}</h3>
+        <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-white/65">{generateStatusAwareDescription(spot)}</p>
+        <AnimatedScoreBar score={spot.score} light />
+      </div>
+    </article>
   );
 }
 
@@ -1714,10 +1851,10 @@ function ZekkeiCard({ spot, index, onOpen, onToggleSaved }: { spot: Spot; index:
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ delay: Math.min(index * 0.035, 0.22) }}
       onClick={onOpen}
-      className="group cursor-pointer overflow-hidden rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200/70 transition duration-300 hover:-translate-y-1 hover:shadow-glow"
+      className="group cursor-pointer overflow-hidden rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200/70 transition duration-200 ease-out hover:scale-[1.03] hover:shadow-glow"
     >
       <div className={`grain relative h-80 bg-gradient-to-br ${spot.imageGradient} p-5 text-white`}>
-        <PhotoFill src={spot.imageUrl} alt={spot.imageAlt} className="transition duration-700 group-hover:scale-105" />
+        <PhotoFill src={spot.imageUrl} alt={spot.imageAlt} className="transition duration-200 ease-out group-hover:scale-[1.03] group-hover:brightness-[1.08]" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/32 via-black/10 to-black/74" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_28rem)]" />
         <div className="relative z-10 flex items-start justify-between gap-3">
@@ -1753,7 +1890,8 @@ function ZekkeiCard({ spot, index, onOpen, onToggleSaved }: { spot: Spot; index:
       </div>
       <div className="p-5">
         <MemoryMetaPanel spot={spot} />
-        <p className="mt-5 min-h-12 text-sm font-medium leading-6 text-slate-600">{getStatusStory(spot)}</p>
+        <p className="mt-5 min-h-12 text-sm font-medium leading-6 text-slate-600">{generateStatusAwareDescription(spot)}</p>
+        <AnimatedScoreBar score={spot.score} />
         <div className="mt-5 flex flex-wrap gap-2">
           {[spot.emotion, spot.weatherMood, ...spot.albumTags.slice(0, 2)].map((tag) => (
             <Pill key={tag} label={tag} />
@@ -1923,17 +2061,21 @@ function ZekkeiDetailModal({
   );
 }
 
-function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: () => void; onAdd: (spot: SpotDraft) => void }) {
+function AddZekkeiModal({ isOpen, spots, onClose, onAdd }: { isOpen: boolean; spots: Spot[]; onClose: () => void; onAdd: (spot: SpotDraft) => void }) {
   const [form, setForm] = useState<SpotDraft>(emptyForm);
+  const [step, setStep] = useState<WizardStep>("photo");
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const suggestions = useMemo(() => [...new Set(spots.flatMap((spot) => [spot.name, spot.location]).filter(Boolean))].slice(0, 40), [spots]);
 
   useEffect(() => {
     if (!isOpen) return;
     setPhotoError("");
+    setStep("photo");
   }, [isOpen]);
 
   const computedScore = useMemo(() => scoreDraft(form), [form]);
+  const hasPhoto = form.imageUrl !== emptyForm.imageUrl;
 
   const toggle = (key: "conditions" | "tags" | "purposeTags", value: string) => {
     setForm((current) => ({
@@ -1942,14 +2084,13 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
     }));
   };
 
-  const handlePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const applyPhotoFile = async (file?: File) => {
     if (!file) return;
     setUploading(true);
     setPhotoError("");
     try {
       const dataUrl = await compressImage(file);
-      setForm((current) => ({ ...current, imageUrl: dataUrl, imageAlt: `${current.name || "追加した絶景"}の写真` }));
+      setForm((current) => ({ ...current, imageUrl: dataUrl, imageAlt: `${current.name || current.memoryTitle || "追加した絶景"}の写真` }));
     } catch {
       setPhotoError("写真を読み込めませんでした。別の画像で試してください。");
     } finally {
@@ -1957,9 +2098,19 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
     }
   };
 
+  const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    void applyPhotoFile(event.target.files?.[0]);
+  };
+
+  const canGoPlace = true;
+  const canGoEmotion = Boolean(form.memoryTitle.trim() && form.location.trim());
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!form.memoryTitle.trim() || !form.location.trim()) return;
+    if (!canGoEmotion) {
+      setStep("place");
+      return;
+    }
     const safeTags = form.tags.length ? form.tags : ["一生に一度"];
     const safeConditions = form.conditions.length ? form.conditions : ["晴れ"];
     const safeName = form.name.trim() || form.memoryTitle.trim();
@@ -1985,6 +2136,7 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
       timingTip: form.timingTip || buildTimingTip(form.bestSeasonRange, form.bestTime, safeConditions),
     });
     setForm(emptyForm);
+    setStep("photo");
     onClose();
   };
 
@@ -2009,61 +2161,76 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/90 px-5 py-4 backdrop-blur-xl sm:px-7">
               <div>
                 <p className="text-sm font-bold text-coral">Museumに飾る絶景を追加</p>
-                <h2 className="text-2xl font-bold text-ink">忘れたくない景色を1枚残す</h2>
+                <h2 className="text-2xl font-bold text-ink">まずはスマホに眠っている1枚から</h2>
               </div>
               <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
+            <div className="px-5 pt-5 sm:px-7">
+              <WizardSteps step={step} />
+            </div>
+
             <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1fr_0.75fr]">
               <div className="grid gap-5">
-                <PhotoUploader src={form.imageUrl} uploading={uploading} error={photoError} onChange={handlePhoto} />
+                {step === "photo" && <PhotoUploader src={form.imageUrl} hasPhoto={hasPhoto} uploading={uploading} error={photoError} onChange={handlePhoto} onFile={applyPhotoFile} />}
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Text label="写真タイトル" value={form.memoryTitle} placeholder="例：星が降ってきた夜" onChange={(value) => setForm((current) => ({ ...current, memoryTitle: value }))} required />
-                  <Text label="日付" value={form.visitedDate} placeholder="例：2026-05-09" onChange={(value) => setForm((current) => ({ ...current, visitedDate: value }))} />
-                  <Text label="スポット名" value={form.name} placeholder="例：阿智村の星空" onChange={(value) => setForm((current) => ({ ...current, name: value }))} />
-                  <Text label="場所" value={form.location} placeholder="例：長野県・阿智村" onChange={(value) => setForm((current) => ({ ...current, location: value }))} required />
-                  <Text label="国・地域" value={form.country} placeholder="例：日本 / ボリビア" onChange={(value) => setForm((current) => ({ ...current, country: value }))} />
-                  <FieldSelect label="カテゴリ" value={form.category} options={categories} onChange={(value) => setForm((current) => ({ ...current, category: value }))} />
-                </div>
+                {step === "place" && (
+                  <div className="grid gap-5">
+                    <div className="rounded-[1.75rem] bg-slate-50 p-4 ring-1 ring-slate-100">
+                      <p className="text-sm font-black text-ink">場所と日付を記録</p>
+                      <p className="mt-1 text-xs font-bold leading-5 text-slate-500">行った景色は記憶として、行きたい景色は未来のMuseumとして保存できます。</p>
+                    </div>
+                    <datalist id="zekkei-place-suggestions">
+                      {suggestions.map((item) => (
+                        <option key={item} value={item} />
+                      ))}
+                    </datalist>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Text label="写真タイトル" value={form.memoryTitle} placeholder="例：星が降ってきた夜" onChange={(value) => setForm((current) => ({ ...current, memoryTitle: value }))} required />
+                      <DateField label="訪問日" value={form.visitedDate} onChange={(value) => setForm((current) => ({ ...current, visitedDate: value }))} />
+                      <Text label="スポット名" value={form.name} placeholder="例：阿智村の星空" list="zekkei-place-suggestions" onChange={(value) => setForm((current) => ({ ...current, name: value }))} />
+                      <Text label="場所名" value={form.location} placeholder="例：長野県・阿智村" list="zekkei-place-suggestions" onChange={(value) => setForm((current) => ({ ...current, location: value }))} required />
+                      <Text label="国・地域" value={form.country} placeholder="例：日本 / ボリビア" onChange={(value) => setForm((current) => ({ ...current, country: value }))} />
+                      <FieldSelect label="カテゴリ" value={form.category} options={categories} onChange={(value) => setForm((current) => ({ ...current, category: value }))} />
+                    </div>
+                    <StatusChoice value={form.status} onChange={(value) => setForm((current) => ({ ...current, status: value }))} />
+                  </div>
+                )}
 
-                <label>
-                  <span className="mb-2 block text-sm font-bold text-slate-700">写真のストーリー</span>
-                  <textarea
-                    value={form.photoStory}
-                    onChange={(event) => setForm((current) => ({ ...current, photoStory: event.target.value, reason: event.target.value }))}
-                    placeholder="一言だけでもOK。この写真を見ると、どんな空気や気持ちを思い出す？"
-                    rows={3}
-                    className="w-full resize-none rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-ink outline-none transition focus:border-coral focus:bg-white"
-                  />
-                </label>
-
-                <label>
-                  <span className="mb-2 block text-sm font-bold text-slate-700">いちばん好きな瞬間</span>
-                  <textarea
-                    value={form.favoriteMoment}
-                    onChange={(event) => setForm((current) => ({ ...current, favoriteMoment: event.target.value, memo: event.target.value }))}
-                    placeholder="光が変わった瞬間、誰かが笑った瞬間、風の匂いなど"
-                    rows={3}
-                    className="w-full resize-none rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-ink outline-none transition focus:border-coral focus:bg-white"
-                  />
-                </label>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <FieldSelect label="感情" value={form.emotion} options={emotionTags} onChange={(value) => setForm((current) => ({ ...current, emotion: value }))} />
-                  <FieldSelect label="天気・空気" value={form.weatherMood} options={weatherMoods} onChange={(value) => setForm((current) => ({ ...current, weatherMood: value }))} />
-                  <FieldSelect label="一緒に行った人" value={form.recommendedWith} options={companions} onChange={(value) => setForm((current) => ({ ...current, recommendedWith: value as Companion }))} />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FieldSelect label="撮った季節" value={form.bestSeason} options={seasons} onChange={(value) => setForm((current) => ({ ...current, bestSeason: value as Season, nextChance: buildNextChance(value as Season, current.conditions) }))} />
-                  <FieldSelect label="撮った時間帯" value={form.bestTime} options={times} onChange={(value) => setForm((current) => ({ ...current, bestTime: value as TimeSlot }))} />
-                </div>
-
-                <Choice label="写真タグ" options={tags} selected={form.tags} onToggle={(value) => toggle("tags", value)} />
-                <Choice label="思い出タグ" options={purposeTags} selected={form.purposeTags} onToggle={(value) => toggle("purposeTags", value)} />
+                {step === "emotion" && (
+                  <div className="grid gap-5">
+                    <ChipGroup label="その時の感情" options={emotionTags} selected={[form.emotion, ...form.purposeTags].filter((item, index, array) => array.indexOf(item) === index)} onToggle={(value) => {
+                      if (emotionTags.includes(value)) setForm((current) => ({ ...current, emotion: value, purposeTags: current.purposeTags.includes(value) ? current.purposeTags : [...current.purposeTags, value] }));
+                    }} />
+                    <Choice label="景色タグ" options={tags} selected={form.tags} onToggle={(value) => toggle("tags", value)} />
+                    <Choice label="目的タグ" options={purposeTags} selected={form.purposeTags} onToggle={(value) => toggle("purposeTags", value)} />
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <FieldSelect label="同行者" value={form.recommendedWith} options={companions} onChange={(value) => setForm((current) => ({ ...current, recommendedWith: value as Companion }))} />
+                      <FieldSelect label="季節" value={form.bestSeason} options={seasons} onChange={(value) => setForm((current) => ({ ...current, bestSeason: value as Season, nextChance: buildNextChance(value as Season, current.conditions) }))} />
+                      <FieldSelect label="時間帯" value={form.bestTime} options={times} onChange={(value) => setForm((current) => ({ ...current, bestTime: value as TimeSlot }))} />
+                    </div>
+                    <FieldSelect label="天気・空気" value={form.weatherMood} options={weatherMoods} onChange={(value) => setForm((current) => ({ ...current, weatherMood: value }))} />
+                    <label>
+                      <span className="mb-2 block text-sm font-bold text-slate-700">一言メモ</span>
+                      <textarea
+                        value={form.photoStory}
+                        onChange={(event) => setForm((current) => ({ ...current, photoStory: event.target.value, reason: event.target.value, memo: event.target.value, favoriteMoment: event.target.value }))}
+                        placeholder="その景色で感じたことを一言"
+                        rows={4}
+                        className="w-full resize-none rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-ink outline-none transition focus:border-coral focus:bg-white"
+                      />
+                    </label>
+                    <div className="rounded-[2rem] bg-ink p-5 text-white shadow-glow">
+                      <div className="mb-4 flex items-center justify-between">
+                        <p className="text-sm font-bold text-white/62">{form.status === "visited" ? "思い出スコア" : "行きたさスコア"}</p>
+                        <p className="text-3xl font-black">{computedScore}</p>
+                      </div>
+                      <Range label={form.status === "visited" ? "思い出の濃さ" : "行きたい熱量"} value={form.score} onChange={(value) => setForm((current) => ({ ...current, score: value }))} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid content-start gap-4">
@@ -2083,21 +2250,28 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
                     <Range label="旅の特別感" value={form.difficulty} min={1} max={5} onChange={(value) => setForm((current) => ({ ...current, difficulty: value }))} />
                     <Range label="また見返したさ" value={form.estimatedCostLevel} min={1} max={5} onChange={(value) => setForm((current) => ({ ...current, estimatedCostLevel: value }))} />
                   </div>
-                  <div className="mt-5 grid gap-3">
-                    <Segment label="思い出レベル" value={form.onceInLifeLevel} options={["normal", "special", "once-in-life"]} onChange={(value) => setForm((current) => ({ ...current, onceInLifeLevel: value as OnceLevel }))} />
-                    <Segment label="保存先" value={form.status} options={["visited", "want", "planned", "dream", "draft"]} labels={statusLabels} onChange={(value) => setForm((current) => ({ ...current, status: value as Status }))} />
-                  </div>
                 </div>
               </div>
             </div>
 
             <div className="sticky bottom-0 flex gap-3 border-t border-slate-100 bg-white/90 p-5 backdrop-blur-xl sm:px-7">
-              <button type="button" onClick={onClose} className="h-12 flex-1 rounded-full bg-slate-100 px-5 text-sm font-bold text-slate-700">
-                キャンセル
+              <button type="button" onClick={step === "photo" ? onClose : () => setStep(step === "emotion" ? "place" : "photo")} className="h-12 flex-1 rounded-full bg-slate-100 px-5 text-sm font-bold text-slate-700">
+                {step === "photo" ? "キャンセル" : "戻る"}
               </button>
-              <button type="submit" className="h-12 flex-[1.4] rounded-full bg-ink px-5 text-sm font-bold text-white shadow-soft">
-                思い出に追加
-              </button>
+              {step !== "emotion" ? (
+                <button
+                  type="button"
+                  disabled={step === "photo" ? !canGoPlace : !canGoEmotion}
+                  onClick={() => setStep(step === "photo" ? "place" : "emotion")}
+                  className="h-12 flex-[1.4] rounded-full bg-ink px-5 text-sm font-bold text-white shadow-soft disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {step === "photo" ? "次へ：場所を記録" : "次へ：感情をタグ付け"}
+                </button>
+              ) : (
+                <button type="submit" className="h-12 flex-[1.4] rounded-full bg-ink px-5 text-sm font-bold text-white shadow-soft">
+                  Museumに飾る
+                </button>
+              )}
             </div>
           </motion.form>
         </motion.div>
@@ -2106,22 +2280,134 @@ function AddZekkeiModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: 
   );
 }
 
-function PhotoUploader({ src, uploading, error, onChange }: { src: string; uploading: boolean; error: string; onChange: (event: ChangeEvent<HTMLInputElement>) => void }) {
+function WizardSteps({ step }: { step: WizardStep }) {
+  const items: { value: WizardStep; label: string; sub: string }[] = [
+    { value: "photo", label: "写真", sub: "1枚選ぶ" },
+    { value: "place", label: "場所", sub: "名前と日付" },
+    { value: "emotion", label: "感情", sub: "記憶をタグ付け" },
+  ];
+  const currentIndex = items.findIndex((item) => item.value === step);
   return (
-    <label className="group relative block cursor-pointer overflow-hidden rounded-[1.75rem] bg-ink text-white shadow-soft">
-      <div className="relative h-52">
-        <PhotoFill src={src} alt="アップロード写真プレビュー" className="opacity-72 transition group-hover:scale-105" />
-        <div className="absolute inset-0 bg-gradient-to-br from-ink/70 via-ink/24 to-coral/30" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-5 text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/18 backdrop-blur-xl ring-1 ring-white/20">
-            {uploading ? <Sparkles className="h-6 w-6 animate-pulse" /> : <Upload className="h-6 w-6" />}
+    <div className="grid grid-cols-3 gap-2 rounded-[1.5rem] bg-slate-50 p-2 ring-1 ring-slate-100">
+      {items.map((item, index) => {
+        const active = item.value === step;
+        const done = index < currentIndex;
+        return (
+          <div key={item.value} className={`rounded-[1.15rem] px-3 py-3 ${active ? "bg-ink text-white shadow-soft" : done ? "bg-white text-ink" : "text-slate-400"}`}>
+            <p className="text-sm font-black">{item.label}</p>
+            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${active ? "text-white/55" : "text-slate-400"}`}>{item.sub}</p>
           </div>
-          <p className="text-lg font-black">{uploading ? "写真を圧縮中..." : "好きな写真を追加"}</p>
-          <p className="mt-1 text-xs font-semibold text-white/62">端末内だけに保存。スクショ映えする1枚にできます。</p>
+        );
+      })}
+    </div>
+  );
+}
+
+function PhotoUploader({
+  src,
+  hasPhoto,
+  uploading,
+  error,
+  onChange,
+  onFile,
+}: {
+  src: string;
+  hasPhoto: boolean;
+  uploading: boolean;
+  error: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onFile: (file?: File) => void;
+}) {
+  const [dragging, setDragging] = useState(false);
+  return (
+    <label
+      className={`group relative block cursor-pointer overflow-hidden rounded-[2rem] border-2 border-dashed bg-ink text-white shadow-soft transition ${dragging ? "border-coral ring-4 ring-coral/20" : "border-white/25"}`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragging(false);
+        onFile(event.dataTransfer.files?.[0]);
+      }}
+    >
+      <div className="relative aspect-video">
+        {hasPhoto ? (
+          <PhotoFill src={src} alt="アップロード写真プレビュー" className="transition duration-200 ease-out group-hover:scale-[1.03] group-hover:brightness-[1.08]" />
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),transparent_22rem),linear-gradient(135deg,#0c1222,#1a2a4a_58%,#5d3b54)]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-br from-ink/78 via-ink/30 to-coral/32" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-5 text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-white/18 backdrop-blur-xl ring-1 ring-white/20">
+            {uploading ? <Sparkles className="h-7 w-7 animate-pulse" /> : <Upload className="h-7 w-7" />}
+          </div>
+          <p className="text-2xl font-black">{uploading ? "写真を圧縮中..." : hasPhoto ? "この1枚をMuseumへ" : "ここに絶景写真をドロップ"}</p>
+          <p className="mt-2 text-sm font-bold text-white/70">またはクリックして選択</p>
+          <p className="mt-1 text-xs font-semibold text-white/54">まずはスマホに眠っている1枚から</p>
         </div>
       </div>
       <input type="file" accept="image/*" onChange={onChange} className="sr-only" />
       {error && <p className="bg-coral/90 px-4 py-3 text-sm font-bold">{error}</p>}
+    </label>
+  );
+}
+
+function StatusChoice({ value, onChange }: { value: Status; onChange: (value: Status) => void }) {
+  const options: { value: Status; label: string; note: string }[] = [
+    { value: "visited", label: "行った", note: "記憶として残す" },
+    { value: "want", label: "行きたい", note: "未来の景色として保存" },
+    { value: "dream", label: "いつか絶対", note: "人生リストに飾る" },
+  ];
+  return (
+    <fieldset>
+      <legend className="mb-2 text-sm font-bold text-slate-700">ステータス</legend>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {options.map((option) => {
+          const active = value === option.value;
+          return (
+            <button key={option.value} type="button" onClick={() => onChange(option.value)} className={`rounded-[1.25rem] p-4 text-left transition ${active ? "bg-ink text-white shadow-soft" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+              <p className="text-sm font-black">{option.label}</p>
+              <p className={`mt-1 text-xs font-bold leading-5 ${active ? "text-white/58" : "text-slate-400"}`}>{option.note}</p>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function ChipGroup({ label, options, selected, onToggle }: { label: string; options: string[]; selected: string[]; onToggle: (value: string) => void }) {
+  return (
+    <fieldset>
+      <legend className="mb-2 text-sm font-bold text-slate-700">{label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const active = selected.includes(option);
+          return (
+            <button key={option} type="button" onClick={() => onToggle(option)} className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-black transition ${active ? "bg-ink text-white shadow-soft ring-4 ring-coral/10" : "bg-slate-100 text-slate-600 hover:-translate-y-0.5 hover:bg-white hover:shadow-soft"}`}>
+              {active && <Check className="h-4 w-4 text-coral" />}
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label>
+      <span className="mb-2 block text-sm font-bold text-slate-700">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-12 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-ink outline-none transition focus:border-coral focus:bg-white"
+      />
     </label>
   );
 }
@@ -2814,6 +3100,27 @@ function MobileBottomDock({ onAdd, onShare }: { onAdd: () => void; onShare: () =
   );
 }
 
+function MemoryToast({ message }: { message: string }) {
+  return (
+    <AnimatePresence>
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, y: 18, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 12, scale: 0.98 }}
+          className="fixed left-1/2 top-5 z-[70] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 overflow-hidden rounded-[1.4rem] bg-ink px-5 py-4 text-white shadow-glow"
+        >
+          <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-coral/35 blur-2xl" />
+          <div className="pointer-events-none absolute left-6 top-2 h-2 w-2 rounded-full bg-white/70 shadow-[0_0_22px_rgba(255,255,255,0.8)]" />
+          <div className="pointer-events-none absolute right-16 bottom-3 h-1.5 w-1.5 rounded-full bg-coral shadow-[0_0_18px_rgba(255,139,104,0.9)]" />
+          <p className="relative text-sm font-black">{message}</p>
+          <p className="relative mt-1 text-xs font-semibold text-white/55">Memory Galleryの先頭に飾りました。</p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function DockButton({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex min-h-14 flex-col items-center justify-center rounded-[1.15rem] px-2 text-xs font-black text-slate-600 transition active:bg-slate-100 [&_svg]:mb-1 [&_svg]:h-5 [&_svg]:w-5">
@@ -2824,14 +3131,21 @@ function DockButton({ icon, label, onClick }: { icon: ReactNode; label: string; 
 }
 
 function PhotoFill({ src, alt, className = "", priority = false }: { src: string; alt: string; className?: string; priority?: boolean }) {
+  const [loaded, setLoaded] = useState(false);
   return (
-    <div
-      role="img"
-      aria-label={alt}
-      data-priority={priority ? "true" : undefined}
-      className={`absolute inset-0 bg-cover bg-center ${className}`}
-      style={{ backgroundImage: `url("${src}")` }}
-    />
+    <div className="absolute inset-0 overflow-hidden bg-[#1a2a4a]">
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,#1a2a4a_0%,#243b63_45%,#1a2a4a_80%)]" />}
+      {/* TODO: 将来的にアップロード画像はWebP圧縮とサムネイル生成を分離する。 */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        className={`absolute inset-0 h-full w-full object-cover ${loaded ? "opacity-100" : "opacity-0"} ${className}`}
+      />
+    </div>
   );
 }
 
@@ -2869,13 +3183,14 @@ function Select({ label, value, options, onChange }: { label: string; value: str
   );
 }
 
-function Text({ label, value, placeholder, onChange, required }: { label: string; value: string; placeholder: string; onChange: (value: string) => void; required?: boolean }) {
+function Text({ label, value, placeholder, list, onChange, required }: { label: string; value: string; placeholder: string; list?: string; onChange: (value: string) => void; required?: boolean }) {
   return (
     <label>
       <span className="mb-2 block text-sm font-bold text-slate-700">{label}</span>
       <input
         value={value}
         required={required}
+        list={list}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         className="h-12 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-ink outline-none transition focus:border-coral focus:bg-white"
@@ -2997,6 +3312,36 @@ function Score({ score, light }: { score: number; light?: boolean }) {
       <div className="relative text-center">
         <p className="text-lg font-black leading-none">{score}</p>
         <p className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.12em] opacity-75">score</p>
+      </div>
+    </div>
+  );
+}
+
+function AnimatedScoreBar({ score, light = false }: { score: number; light?: boolean }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setVisible(true);
+      },
+      { threshold: 0.35 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="mt-3">
+      <div className={`mb-1 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.14em] ${light ? "text-white/58" : "text-slate-400"}`}>
+        <span>Memory Score</span>
+        <span>{visible ? score : 0}</span>
+      </div>
+      <div className={`h-2 overflow-hidden rounded-full ${light ? "bg-white/18" : "bg-slate-100"}`}>
+        <div className="h-full rounded-full bg-gradient-to-r from-coral via-[#ffd6a5] to-lagoon transition-all duration-1000 ease-out" style={{ width: `${visible ? score : 0}%` }} />
       </div>
     </div>
   );
@@ -3636,6 +3981,10 @@ function formatYearlyJourney(count: number) {
 }
 
 function getStatusStory(spot: Spot) {
+  return generateStatusAwareDescription(spot);
+}
+
+function generateStatusAwareDescription(spot: Spot) {
   const place = spot.name;
   const season = spot.bestSeasonRange;
   if (spot.status === "visited") return toVisitedStory(spot);
@@ -3951,6 +4300,23 @@ function compressImage(file: File): Promise<string> {
           return;
         }
         context.drawImage(image, 0, 0, width, height);
+        if (canvas.toBlob) {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                resolve(canvas.toDataURL("image/jpeg", 0.82));
+                return;
+              }
+              const blobReader = new FileReader();
+              blobReader.onerror = () => resolve(canvas.toDataURL("image/jpeg", 0.82));
+              blobReader.onload = () => resolve(String(blobReader.result));
+              blobReader.readAsDataURL(blob);
+            },
+            "image/webp",
+            0.85,
+          );
+          return;
+        }
         resolve(canvas.toDataURL("image/jpeg", 0.82));
       };
       image.src = String(reader.result);
