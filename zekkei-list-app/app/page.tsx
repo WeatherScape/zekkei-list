@@ -921,6 +921,7 @@ export default function Home() {
     <main className="min-h-screen overflow-hidden pb-24 sm:pb-0">
       <Header onAdd={() => setModalOpen(true)} onShare={() => openShare()} />
       <Hero onAdd={() => setModalOpen(true)} onShare={() => openShare(recommendation.spot)} />
+      <AdventureGuideSection spots={spots} analysis={analysis} onAdd={() => setModalOpen(true)} onShare={() => openShare(recommendation.spot)} />
       {isSampleMuseum && <SampleMuseumBanner onAdd={() => setModalOpen(true)} />}
 
       <section className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
@@ -1610,6 +1611,208 @@ function Stat({ icon, label, value, note, suffix = "" }: { icon: ReactNode; labe
         </p>
         <p className="pb-1 text-right text-xs font-semibold text-slate-400">{note}</p>
       </div>
+    </div>
+  );
+}
+
+function AdventureGuideSection({ spots, analysis, onAdd, onShare }: { spots: Spot[]; analysis: Analysis; onAdd: () => void; onShare: () => void }) {
+  const atlasSpots = spots.slice(0, 5);
+  const guideSteps = [
+    {
+      icon: <Upload />,
+      title: "1枚をMuseumに飾る",
+      copy: "スマホに眠っている絶景写真を選ぶだけ。場所と日付はあとから整えてもOKです。",
+      action: "写真を追加",
+      onClick: onAdd,
+    },
+    {
+      icon: <Sparkles />,
+      title: "感情で記憶を深くする",
+      copy: "静か、鳥肌、青春、人生ベスト。景色だけでなく、その時の気持ちまで残します。",
+      action: "感情タグを見る",
+      onClick: () => document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    },
+    {
+      icon: <Map />,
+      title: "地図で旅の軌跡を見る",
+      copy: "行った場所、行きたい場所、次に呼ばれている景色をひとつの絶景Atlasで眺めます。",
+      action: "地図へ",
+      onClick: () => document.getElementById("map")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    },
+    {
+      icon: <Share2 />,
+      title: "AI診断カードで共有",
+      copy: "旅の深層心理、感情の地形、記憶の映画ポスターをそのままストーリーへ。",
+      action: "診断を作る",
+      onClick: onShare,
+    },
+  ];
+
+  return (
+    <section className="relative mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+      <div className="overflow-hidden rounded-[2.75rem] bg-ink text-white shadow-glow">
+        <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[0.82fr_1.18fr] lg:p-8">
+          <div className="pointer-events-none absolute -left-24 top-8 h-72 w-72 rounded-full bg-lagoon/20 blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-coral/18 blur-3xl" />
+
+          <div className="relative z-10 flex flex-col justify-between gap-8">
+            <div>
+              <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-black text-white/78 ring-1 ring-white/10">
+                <Compass className="h-4 w-4 text-coral" />
+                How it works / 使い方
+              </p>
+              <h2 className="text-3xl font-black leading-tight tracking-normal sm:text-4xl">
+                写真を追加すると、あなたの旅が地図と診断に変わっていく。
+              </h2>
+              <p className="mt-4 max-w-xl text-sm font-semibold leading-7 text-white/62">
+                Zekkei Listは、ルートを計画するアプリではなく、見た景色とこれから見たい景色を“記憶の地図”として育てるアプリです。写真、感情、場所がつながるほど、My Zekkei Museumが自分らしくなります。
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {guideSteps.map((step, index) => (
+                <motion.button
+                  key={step.title}
+                  type="button"
+                  onClick={step.onClick}
+                  initial={{ opacity: 0, x: -14 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, amount: 0.35 }}
+                  transition={{ delay: index * 0.08 }}
+                  className="group grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[1.35rem] bg-white/[0.06] p-3 text-left ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:bg-white/[0.1]"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-[1.05rem] bg-white/12 text-coral ring-1 ring-white/10 [&_svg]:h-5 [&_svg]:w-5">
+                    {step.icon}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-black text-white">{step.title}</span>
+                    <span className="mt-1 line-clamp-2 block text-xs font-semibold leading-5 text-white/54">{step.copy}</span>
+                  </span>
+                  <span className="hidden rounded-full bg-white/10 px-3 py-1 text-[11px] font-black text-white/58 transition group-hover:bg-white group-hover:text-ink sm:block">
+                    {step.action}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative z-10">
+            <ZekkeiRouteAtlas spots={atlasSpots} analysis={analysis} onAdd={onAdd} onShare={onShare} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ZekkeiRouteAtlas({ spots, analysis, onAdd, onShare }: { spots: Spot[]; analysis: Analysis; onAdd: () => void; onShare: () => void }) {
+  const pins = [
+    { x: 21, y: 62 },
+    { x: 42, y: 38 },
+    { x: 63, y: 56 },
+    { x: 78, y: 29 },
+    { x: 86, y: 70 },
+  ];
+  const route = "M58 295 C110 210 169 198 216 143 C269 83 319 190 380 196 C449 203 438 96 514 91 C600 88 552 260 630 300";
+  const featured = spots[0] ?? samples[0];
+
+  return (
+    <div className="relative min-h-[620px] overflow-hidden rounded-[2.2rem] bg-[#07101f] p-4 shadow-soft ring-1 ring-white/10 sm:p-5">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(120,212,200,0.22),transparent_18rem),radial-gradient(circle_at_80%_20%,rgba(255,139,104,0.18),transparent_20rem),linear-gradient(135deg,#07101f,#10233d_52%,#1d1430)]" />
+      <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:42px_42px]" />
+      <motion.div
+        className="absolute left-8 top-8 h-28 w-28 rounded-full border border-white/10"
+        animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.08, 0.35] }}
+        transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute right-14 top-20 h-36 w-36 rounded-full border border-coral/25"
+        animate={{ scale: [1, 1.22, 1], opacity: [0.28, 0.08, 0.28] }}
+        transition={{ duration: 5.4, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      <div className="relative z-10 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-white/45">Zekkei Atlas</p>
+          <h3 className="mt-2 text-3xl font-black tracking-normal">記憶の地図</h3>
+          <p className="mt-2 max-w-sm text-sm font-semibold leading-6 text-white/58">写真を足すたび、ピンと光のルートが増えていく。次に行きたい景色まで、ひとつの地図で見える。</p>
+        </div>
+        <div className="rounded-[1.25rem] bg-white/10 px-4 py-3 text-right ring-1 ring-white/10">
+          <p className="text-2xl font-black">{analysis.memoryCount}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">memories</p>
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-6 h-[340px] overflow-hidden rounded-[1.7rem] bg-white/[0.04] ring-1 ring-white/10">
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 700 360" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 285 C94 248 125 334 211 274 C299 213 335 295 421 239 C510 180 576 217 700 161" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="34" />
+          <path d="M0 85 C98 128 151 38 238 83 C329 130 386 42 471 82 C566 126 602 55 700 75" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="22" />
+          <motion.path
+            d={route}
+            fill="none"
+            stroke="rgba(255,139,104,0.9)"
+            strokeLinecap="round"
+            strokeWidth="4"
+            strokeDasharray="18 14"
+            animate={{ strokeDashoffset: [0, -96] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.circle r="7" fill="#78d4c8">
+            <animateMotion dur="7s" repeatCount="indefinite" path={route} />
+          </motion.circle>
+        </svg>
+
+        {spots.map((spot, index) => {
+          const pin = pins[index % pins.length];
+          return (
+            <motion.button
+              key={spot.id}
+              type="button"
+              className="absolute z-10 -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
+              initial={{ scale: 0.8, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.12 }}
+            >
+              <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-white text-ink shadow-glow ring-4 ring-white/20">
+                <MapPin className="h-5 w-5 text-coral" />
+                <motion.span className="absolute inset-0 rounded-full border border-white/60" animate={{ scale: [1, 1.75], opacity: [0.5, 0] }} transition={{ duration: 2.2, repeat: Infinity, delay: index * 0.28 }} />
+              </span>
+              <span className="mt-2 hidden max-w-[9rem] rounded-full bg-black/28 px-3 py-1 text-[10px] font-black text-white/78 backdrop-blur-xl sm:block">
+                {spot.name}
+              </span>
+            </motion.button>
+          );
+        })}
+
+        <div className="absolute bottom-4 left-4 right-4 z-20 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div className="rounded-[1.35rem] bg-black/24 p-4 text-white backdrop-blur-xl ring-1 ring-white/10">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/42">Current highlight</p>
+            <p className="mt-1 text-lg font-black">{featured.name}</p>
+            <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-white/56">{generateStatusAwareDescription(featured)}</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onAdd} className="h-11 rounded-full bg-white px-4 text-xs font-black text-ink shadow-soft">写真を追加</button>
+            <button onClick={onShare} className="h-11 rounded-full bg-coral px-4 text-xs font-black text-white shadow-soft">診断</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-4 grid gap-3 sm:grid-cols-3">
+        <AtlasMetric label="Memory Path" value={`${analysis.memoryCount} pins`} />
+        <AtlasMetric label="Top Emotion" value={analysis.topEmotion} />
+        <AtlasMetric label="Next Signal" value={analysis.topTags[0]?.label ?? "絶景"} />
+      </div>
+    </div>
+  );
+}
+
+function AtlasMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[1.25rem] bg-white/[0.06] p-4 ring-1 ring-white/10">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/38">{label}</p>
+      <p className="mt-1 truncate text-lg font-black text-white">{value}</p>
     </div>
   );
 }
